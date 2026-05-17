@@ -15,6 +15,25 @@ struct QuickAccessCardView: View {
     private let swipeVelocityThreshold: CGFloat = 320
 
     var body: some View {
+        VStack(spacing: QuickAccessLayout.conversionActionSpacing) {
+            mediaCard
+            conversionActions
+        }
+        .frame(
+            width: QuickAccessLayout.cardWidth,
+            height: QuickAccessLayout.itemHeight(hasConversionActions: item.hasConversionTargets)
+        )
+        .opacity(cardOpacity)
+        .offset(x: reduceMotion ? 0 : swipeOffset)
+        .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.035))
+        .gesture(swipeDismissGesture)
+        .onDisappear {
+            isDraggingToDismiss = false
+            dismissTask?.cancel()
+        }
+    }
+
+    private var mediaCard: some View {
         ZStack {
             backgroundImage
             readabilityOverlay
@@ -39,9 +58,6 @@ struct QuickAccessCardView: View {
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(.white.opacity(0.16), lineWidth: 1))
         .compositingGroup()
-        .opacity(cardOpacity)
-        .offset(x: reduceMotion ? 0 : swipeOffset)
-        .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.035))
         .shadow(color: .black.opacity(isHovering ? 0.11 : 0.075), radius: isHovering ? 30 : 26, x: 0, y: isHovering ? 13 : 10)
         .shadow(color: .black.opacity(isHovering ? 0.08 : 0.055), radius: isHovering ? 12 : 9, x: 0, y: isHovering ? 5 : 4)
         .shadow(color: .black.opacity(isHovering ? 0.05 : 0.035), radius: isHovering ? 2.5 : 2, x: 0, y: 1)
@@ -55,17 +71,12 @@ struct QuickAccessCardView: View {
         .onTapGesture(count: 2) {
             manager.openItem(for: item.id)
         }
-        .gesture(swipeDismissGesture)
-        .onDisappear {
-            isDraggingToDismiss = false
-            dismissTask?.cancel()
-        }
         .contextMenu {
-            Button(item.outputURL == nil ? "Open Original" : "Open Output") {
+            Button(item.outputURL == nil ? "Open Original" : "Open Preview") {
                 manager.openItem(for: item.id)
             }
             if item.outputURL != nil {
-                Button("Reveal Output") {
+                Button("Reveal in Finder") {
                     manager.revealOutput(for: item.id)
                 }
             }
@@ -73,6 +84,92 @@ struct QuickAccessCardView: View {
                 manager.removeItem(id: item.id)
             }
         }
+    }
+
+    @ViewBuilder
+    private var conversionActions: some View {
+        if item.hasConversionTargets {
+            HStack(spacing: QuickAccessLayout.conversionActionButtonSpacing) {
+                ForEach(item.conversionTargets) { target in
+                    conversionButton(for: target)
+                }
+            }
+            .frame(width: QuickAccessLayout.cardWidth, height: QuickAccessLayout.conversionActionRowHeight)
+        }
+    }
+
+    private func conversionButton(for target: QuickAccessConversionTarget) -> some View {
+        let isActive = item.activeConversionTarget == target
+
+        return Button {
+            manager.convertItem(id: item.id, to: target)
+        } label: {
+            ZStack {
+                Capsule()
+                    .fill(conversionButtonBackground(isActive: isActive))
+
+                if isActive {
+                    Capsule()
+                        .fill(.black.opacity(0.18))
+                }
+
+                Text(target.displayName)
+                    .font(.system(size: QuickAccessLayout.conversionActionFontSize, weight: .bold, design: .rounded))
+                    .foregroundStyle(conversionButtonForeground(isActive: isActive))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: QuickAccessLayout.conversionActionVisualHeight)
+            .overlay(
+                ZStack {
+                    Capsule()
+                        .stroke(conversionButtonBorder(isActive: isActive), lineWidth: isActive ? 1.2 : 1)
+                    if isActive {
+                        Capsule()
+                            .stroke(.white.opacity(0.24), lineWidth: 1)
+                            .padding(1)
+                    }
+                }
+            )
+            .frame(maxHeight: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .frame(height: QuickAccessLayout.conversionActionRowHeight)
+        .opacity(item.state == .processing && !isActive ? 0.42 : 1)
+        .disabled(item.state == .processing)
+        .contentShape(Rectangle())
+        .help("Convert original to \(target.displayName)")
+        .quickAccessCursor(.pointingHand)
+    }
+
+    private func conversionButtonForeground(isActive: Bool) -> Color {
+        if isActive {
+            return .white
+        }
+        return item.state == .processing ? .secondary : .primary
+    }
+
+    private func conversionButtonBackground(isActive: Bool) -> some ShapeStyle {
+        isActive ? AnyShapeStyle(Self.accentColor) : AnyShapeStyle(item.state == .processing ? .thinMaterial : .regularMaterial)
+    }
+
+    private func conversionButtonBorder(isActive: Bool) -> Color {
+        isActive ? Self.accentColor.opacity(0.88) : .white.opacity(item.state == .processing ? 0.10 : 0.20)
+    }
+
+    private static var accentColor: Color {
+        Color(nsColor: accentNSColor)
+    }
+
+    private static var accentNSColor: NSColor {
+        if #available(macOS 10.14, *) {
+            return .controlAccentColor
+        }
+        return .systemBlue
     }
 
     private var cardOpacity: Double {
@@ -85,14 +182,12 @@ struct QuickAccessCardView: View {
         DragGesture(minimumDistance: 6)
             .onChanged { value in
                 guard !isDismissing else { return }
-                let translation = value.translation.width
-                guard abs(translation) > abs(value.translation.height) else { return }
                 isDraggingToDismiss = true
 
                 if reduceMotion {
                     swipeOffset = 0
                 } else {
-                    swipeOffset = translation
+                    swipeOffset = value.translation.width
                 }
             }
             .onEnded { value in
@@ -102,7 +197,7 @@ struct QuickAccessCardView: View {
                 let translation = value.translation.width
                 let isHorizontal = abs(translation) > abs(value.translation.height)
                 let shouldDismiss = isHorizontal
-                    && (abs(translation) > swipeDismissThreshold || abs(value.velocity.width) > swipeVelocityThreshold)
+                    && (abs(translation) > swipeDismissThreshold || abs(value.predictedEndTranslation.width) > swipeVelocityThreshold)
 
                 if shouldDismiss {
                     dismissCard(inDirection: translation == 0 ? manager.position.dismissDirection : translation)
@@ -159,35 +254,50 @@ struct QuickAccessCardView: View {
     }
 
     private var topControls: some View {
-        HStack(alignment: .top) {
+        HStack(alignment: .center) {
             Button {
                 manager.removeItem(id: item.id)
             } label: {
                 Image(systemName: item.state == .processing ? "stop.fill" : "xmark")
-                    .font(.system(size: 10, weight: .semibold))
+                    .font(.system(size: QuickAccessLayout.closeButtonIconSize, weight: .semibold))
                     .foregroundStyle(.primary)
-                    .frame(width: 22, height: 22)
+                    .frame(
+                        width: QuickAccessLayout.closeButtonVisualSize,
+                        height: QuickAccessLayout.closeButtonVisualSize
+                    )
                     .background(.regularMaterial, in: Circle())
                     .overlay(Circle().stroke(.white.opacity(0.24), lineWidth: 1))
+                    .frame(
+                        width: QuickAccessLayout.closeButtonHitSize,
+                        height: QuickAccessLayout.closeButtonHitSize
+                    )
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .help(item.state == .processing ? "Stop" : "Remove")
             .quickAccessCursor(.pointingHand)
 
             Spacer()
 
             Image(systemName: item.kind.systemImage)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.system(size: QuickAccessLayout.kindBadgeIconSize, weight: .semibold))
                 .foregroundStyle(.secondary)
-                .frame(width: 28, height: 20)
-                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .frame(
+                    width: QuickAccessLayout.kindBadgeWidth,
+                    height: QuickAccessLayout.kindBadgeHeight
+                )
+                .background(
+                    .regularMaterial,
+                    in: RoundedRectangle(cornerRadius: QuickAccessLayout.kindBadgeCornerRadius, style: .continuous)
+                )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    RoundedRectangle(cornerRadius: QuickAccessLayout.kindBadgeCornerRadius, style: .continuous)
                         .stroke(.white.opacity(0.20), lineWidth: 1)
                 )
         }
-        .padding(.horizontal, 7)
-        .padding(.top, 7)
+        .padding(.horizontal, QuickAccessLayout.topControlHorizontalPadding)
+        .padding(.top, QuickAccessLayout.topControlTopPadding)
     }
 
     private var processingOverlay: some View {
@@ -198,7 +308,7 @@ struct QuickAccessCardView: View {
                 .lineLimit(1)
                 .truncationMode(.middle)
 
-            Text("Optimizing")
+            Text(item.activeOperationName)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
                 .lineLimit(1)

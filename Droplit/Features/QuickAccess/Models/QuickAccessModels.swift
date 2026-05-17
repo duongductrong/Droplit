@@ -80,17 +80,45 @@ enum QuickAccessLayout {
     static let cardWidth: CGFloat = 184
     static let cardHeight: CGFloat = 118
     static let overflowCardHeight: CGFloat = cardHeight
+    static let conversionActionRowHeight: CGFloat = 16
+    static let conversionActionVisualHeight: CGFloat = 13
+    static let conversionActionSpacing: CGFloat = 3
+    static let conversionActionButtonSpacing: CGFloat = 3
+    static let conversionActionFontSize: CGFloat = 6.5
+    static let closeButtonHitSize: CGFloat = 30
+    static let closeButtonVisualSize: CGFloat = 18
+    static let closeButtonIconSize: CGFloat = 8
+    static let kindBadgeWidth: CGFloat = 24
+    static let kindBadgeHeight: CGFloat = 16
+    static let kindBadgeIconSize: CGFloat = 9
+    static let kindBadgeCornerRadius: CGFloat = 5
+    static let topControlHorizontalPadding: CGFloat = 5
+    static let topControlTopPadding: CGFloat = 4
     static let cornerRadius: CGFloat = 14
     static let cardSpacing: CGFloat = 10
     static let shadowMargin: CGFloat = 44
     static let containerPadding: CGFloat = shadowMargin
     static let maximumFloatingItems = 4
 
-    static func panelSize(itemCardCount: Int, includesOverflowCard: Bool) -> CGSize {
-        let visibleCount = max(itemCardCount + (includesOverflowCard ? 1 : 0), 1)
+    static func itemHeight(hasConversionActions: Bool) -> CGFloat {
+        cardHeight + (hasConversionActions ? conversionActionSpacing + conversionActionRowHeight : 0)
+    }
+
+    static func panelSize(
+        itemCardCount: Int,
+        conversionActionRowCount: Int,
+        dropPlaceholderCount: Int,
+        includesOverflowCard: Bool
+    ) -> CGSize {
+        let visibleCount = max(
+            itemCardCount + dropPlaceholderCount + (includesOverflowCard ? 1 : 0),
+            1
+        )
         let itemHeight = cardHeight * CGFloat(itemCardCount)
+            + (conversionActionSpacing + conversionActionRowHeight) * CGFloat(conversionActionRowCount)
+        let dropPlaceholderHeight = cardHeight * CGFloat(dropPlaceholderCount)
         let overflowHeight = includesOverflowCard ? overflowCardHeight : 0
-        let height = itemHeight + overflowHeight
+        let height = itemHeight + dropPlaceholderHeight + overflowHeight
             + (cardSpacing * CGFloat(max(visibleCount - 1, 0)))
             + (containerPadding * 2)
         return CGSize(width: cardWidth + containerPadding * 2, height: height)
@@ -161,6 +189,86 @@ enum QuickAccessFileKind: String, CaseIterable, Codable {
     }
 }
 
+enum QuickAccessConversionTarget: String, CaseIterable, Codable, Identifiable {
+    case png
+    case jpeg
+    case webp
+    case heic
+    case gif
+    case mov
+    case mp4
+
+    var id: String { rawValue }
+
+    static let imageTargets: [QuickAccessConversionTarget] = [.png, .jpeg, .webp, .heic]
+    static let videoTargets: [QuickAccessConversionTarget] = [.gif, .mov, .mp4]
+
+    static func targets(for kind: QuickAccessFileKind) -> [QuickAccessConversionTarget] {
+        switch kind {
+        case .png, .jpeg, .image:
+            return imageTargets
+        case .gif, .video:
+            return videoTargets
+        case .pdf, .unknown:
+            return []
+        }
+    }
+
+    static func sourceTarget(for url: URL, kind: QuickAccessFileKind) -> QuickAccessConversionTarget? {
+        let pathExtension = url.pathExtension.lowercased()
+        let target: QuickAccessConversionTarget?
+
+        switch pathExtension {
+        case "png":
+            target = .png
+        case "jpg", "jpeg":
+            target = .jpeg
+        case "webp":
+            target = .webp
+        case "heic", "heif":
+            target = .heic
+        case "gif":
+            target = .gif
+        case "mov":
+            target = .mov
+        case "mp4":
+            target = .mp4
+        default:
+            target = nil
+        }
+
+        guard let target, targets(for: kind).contains(target) else {
+            return nil
+        }
+        return target
+    }
+
+    var displayName: String {
+        switch self {
+        case .jpeg:
+            return "JPEG"
+        default:
+            return rawValue.uppercased()
+        }
+    }
+
+    var fileExtension: String {
+        rawValue
+    }
+
+    var isImageTarget: Bool {
+        Self.imageTargets.contains(self)
+    }
+
+    var isVideoTarget: Bool {
+        Self.videoTargets.contains(self)
+    }
+
+    var processingTitle: String {
+        "Converting to \(displayName)"
+    }
+}
+
 struct QuickAccessItem: Identifiable {
     let id: UUID
     let sourceURL: URL
@@ -176,6 +284,8 @@ struct QuickAccessItem: Identifiable {
     var outputURL: URL?
     var pixelSize: CGSize?
     var failureMessage: String?
+    var activeOperationName: String
+    var activeConversionTarget: QuickAccessConversionTarget?
 
     init(
         sourceURL: URL,
@@ -199,6 +309,8 @@ struct QuickAccessItem: Identifiable {
         self.optimizedBytes = nil
         self.outputURL = nil
         self.failureMessage = nil
+        self.activeOperationName = "Optimizing"
+        self.activeConversionTarget = QuickAccessConversionTarget.sourceTarget(for: sourceURL, kind: kind)
     }
 
     var originalSizeText: String {
@@ -214,6 +326,18 @@ struct QuickAccessItem: Identifiable {
         return title.isEmpty ? sourceURL.lastPathComponent : title
     }
 
+    var conversionTargets: [QuickAccessConversionTarget] {
+        QuickAccessConversionTarget.targets(for: kind)
+    }
+
+    var sourceConversionTarget: QuickAccessConversionTarget? {
+        QuickAccessConversionTarget.sourceTarget(for: sourceURL, kind: kind)
+    }
+
+    var hasConversionTargets: Bool {
+        !conversionTargets.isEmpty
+    }
+
     var dimensionsText: String {
         guard let pixelSize, pixelSize.width > 0, pixelSize.height > 0 else {
             return kind.displayName
@@ -227,9 +351,9 @@ struct QuickAccessItem: Identifiable {
             return "Queued"
         case .processing:
             if let mediaDuration, mediaDuration > 0 {
-                return "\(elapsed.timecode3) of \(mediaDuration.timecode3)"
+                return "\(activeOperationName) \(elapsed.timecode3) of \(mediaDuration.timecode3)"
             }
-            return "Optimizing \(elapsed.timecode3)"
+            return "\(activeOperationName) \(elapsed.timecode3)"
         case .completed:
             return "\(originalSizeText) -> \(optimizedSizeText)"
         case .failed:

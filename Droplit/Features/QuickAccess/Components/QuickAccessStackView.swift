@@ -33,7 +33,9 @@ struct QuickAccessStackView: View {
 
     private var panelSize: CGSize {
         QuickAccessLayout.panelSize(
-            itemCardCount: manager.floatingItems.count + (manager.isDropPlaceholderVisible ? 1 : 0),
+            itemCardCount: manager.floatingItems.count,
+            conversionActionRowCount: manager.floatingItems.filter(\.hasConversionTargets).count,
+            dropPlaceholderCount: manager.isDropPlaceholderVisible ? 1 : 0,
             includesOverflowCard: manager.hasOverflowCard
         )
     }

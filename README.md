@@ -16,9 +16,14 @@ Supported optimizer tools:
 - `jpegoptim` for JPEG
 - `gifsicle` for GIF
 - `ffmpeg` for videos
-- `vips` from libvips for image resizing
+- `vips` from libvips for image resizing and WebP conversion
 - `gifski` for video-to-GIF workflows
 - `gs` from Ghostscript for PDFs
+
+Quick Access cards also expose one-tap format conversion actions. Image cards
+can convert the original source to PNG, JPEG, WebP, or HEIC. Video/GIF cards can
+convert the original source to GIF, MOV, or MP4. These conversions always start
+from the dropped source file, not from a previously optimized output.
 
 The app checks these tools on launch. If Homebrew is installed and any optimizer
 is missing, use the install button in the Tools panel to bootstrap the missing

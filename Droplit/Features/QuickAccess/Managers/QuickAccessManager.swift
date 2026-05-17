@@ -251,6 +251,34 @@ final class QuickAccessManager: ObservableObject {
         }
     }
 
+    func convertItem(id: UUID, to target: QuickAccessConversionTarget) {
+        guard let index = items.firstIndex(where: { $0.id == id }),
+              items[index].conversionTargets.contains(target),
+              items[index].state != .processing else {
+            return
+        }
+
+        completedDismissTasks[id]?.cancel()
+        completedDismissTasks[id] = nil
+        elapsedTasks[id]?.cancel()
+        elapsedTasks[id] = nil
+        processTasks[id]?.cancel()
+        processTasks[id] = nil
+
+        items[index].state = .processing
+        items[index].elapsed = 0
+        items[index].progress = items[index].mediaDuration == nil ? nil : 0
+        items[index].optimizedBytes = nil
+        items[index].outputURL = nil
+        items[index].failureMessage = nil
+        items[index].activeOperationName = target.processingTitle
+        items[index].activeConversionTarget = target
+
+        startElapsedTicker(for: id)
+        startConversion(for: id, url: items[index].sourceURL, target: target)
+        refreshPanel()
+    }
+
     private func recordDrag(location: CGPoint, timestamp: TimeInterval) {
         let wasDragSessionActive = isDragSessionActive
         isDragSessionActive = true
@@ -383,6 +411,8 @@ final class QuickAccessManager: ObservableObject {
             items[index].state = .processing
             items[index].elapsed = 0
             items[index].progress = items[index].mediaDuration == nil ? nil : 0
+            items[index].activeOperationName = "Optimizing"
+            items[index].activeConversionTarget = items[index].sourceConversionTarget
             startElapsedTicker(for: id)
             startOptimization(for: id, url: items[index].sourceURL, kind: items[index].kind)
         }
@@ -392,6 +422,17 @@ final class QuickAccessManager: ObservableObject {
         processTasks[id] = Task { [weak self] in
             do {
                 let result = try await OptimizationService.optimize(sourceURL: url, kind: kind)
+                self?.completeItem(id: id, result: result)
+            } catch {
+                self?.failItem(id: id, error: error)
+            }
+        }
+    }
+
+    private func startConversion(for id: UUID, url: URL, target: QuickAccessConversionTarget) {
+        processTasks[id] = Task { [weak self] in
+            do {
+                let result = try await OptimizationService.convert(sourceURL: url, target: target)
                 self?.completeItem(id: id, result: result)
             } catch {
                 self?.failItem(id: id, error: error)
@@ -424,6 +465,7 @@ final class QuickAccessManager: ObservableObject {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
         items[index].state = .failed
         items[index].progress = nil
+        items[index].activeConversionTarget = items[index].sourceConversionTarget
         items[index].failureMessage = error.localizedDescription
         schedulePendingJobs()
     }
@@ -493,7 +535,9 @@ final class QuickAccessManager: ObservableObject {
         }
 
         let size = QuickAccessLayout.panelSize(
-            itemCardCount: floatingItemCount + (isDropPlaceholderVisible ? 1 : 0),
+            itemCardCount: floatingItemCount,
+            conversionActionRowCount: floatingConversionActionRowCount,
+            dropPlaceholderCount: isDropPlaceholderVisible ? 1 : 0,
             includesOverflowCard: hasOverflowCard
         )
         if panelController.isVisible {
@@ -514,6 +558,10 @@ final class QuickAccessManager: ObservableObject {
 
     private var floatingItemCount: Int {
         floatingItems.count
+    }
+
+    private var floatingConversionActionRowCount: Int {
+        floatingItems.filter(\.hasConversionTargets).count
     }
 
     private var overflowCardCount: Int {

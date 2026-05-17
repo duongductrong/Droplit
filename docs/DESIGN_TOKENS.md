@@ -1,0 +1,82 @@
+# Design Tokens
+
+Droplit uses native macOS visual language: system materials, semantic colors,
+compact controls, and rounded utility surfaces.
+
+## Color
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `color.accent` | `NSColor.controlAccentColor` | Active controls, selected conversion format |
+| `color.accentFallback` | `NSColor.systemBlue` | Fallback when dynamic accent unavailable |
+| `color.text.primary` | SwiftUI `.primary` | Main labels |
+| `color.text.secondary` | SwiftUI `.secondary` | Metadata, inactive icons |
+| `color.text.activeOnAccent` | White | Text on accent-filled active controls |
+| `color.surface.material` | `.regularMaterial` | Floating chip/button surface |
+| `color.surface.materialSubtle` | `.thinMaterial` | Disabled/processing chip surface |
+| `color.stroke.card` | White at 16% opacity | Quick Access card border |
+| `color.stroke.control` | White at 20% opacity | Inactive small control border |
+
+## Typography
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `type.cardTitle` | system 13 semibold | Card status titles |
+| `type.cardMeta` | system 11 semibold rounded | Size, timing, compact metrics |
+| `type.cardCaption` | system 10 medium | File titles and failure text |
+| `type.conversionButton` | system 6.5 bold rounded | XS conversion actions |
+
+## Size
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `size.quickAccessCard.width` | 184 | Floating card width |
+| `size.quickAccessCard.height` | 118 | Floating card height |
+| `size.conversionRow.height` | 16 | XS conversion action hit row |
+| `size.conversionButton.visualHeight` | 13 | XS conversion action visual pill |
+| `size.iconButton.visual` | 18 | Card remove/stop visible control |
+| `size.iconButton.hit` | 30 | Card remove/stop invisible hit area |
+| `size.kindBadge.width` | 24 | File kind badge |
+| `size.kindBadge.height` | 16 | File kind badge |
+
+## Spacing
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `space.cardStackGap` | 10 | Vertical card stack spacing |
+| `space.conversionRowGap` | 3 | Gap between card and conversion row |
+| `space.conversionButtonGap` | 3 | Horizontal gap between conversion buttons |
+| `space.panelPadding` | 44 | Floating panel shadow/padding allowance |
+| `space.cardContentX` | 12 | Card lower content horizontal padding |
+
+## Radius
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `radius.card` | 14 continuous | Quick Access cards |
+| `radius.badge` | 6 continuous | File kind badge |
+| `radius.buttonPill` | capsule | Conversion format buttons |
+
+## State
+
+| State | Treatment |
+| --- | --- |
+| `default` | Primary text, regular material, 20% white stroke |
+| `processing` | Secondary text, thin material, reduced opacity |
+| `activeConversion` | Accent fill, subtle black overlay, white text, accent stroke |
+| `disabledProcessingInactive` | 42% opacity, no click action |
+| `defaultSourceConversion` | Active state inferred from source extension when target exists |
+
+## Implementation Map
+
+- Quick Access dimensions live in `QuickAccessLayout`.
+- Conversion active state lives on `QuickAccessItem.activeConversionTarget`.
+- Active color resolves through `NSColor.controlAccentColor`; fallback is system blue.
+- Active quick action text is always white; active fill keeps the macOS accent color with a subtle dark overlay for readability.
+- Quick action hit area is the full button cell, not only the text label or visual pill.
+- Close control separates a compact visible circle from a larger invisible hit area.
+- Source extension defaults are `png`, `jpg/jpeg`, `webp`, `heic/heif`, `gif`, `mov`, and `mp4`.
+
+## Unresolved Questions
+
+- None.

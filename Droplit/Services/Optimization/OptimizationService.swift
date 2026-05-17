@@ -1,5 +1,7 @@
 import AppKit
 import Foundation
+import ImageIO
+import UniformTypeIdentifiers
 
 struct OptimizationResult {
     let outputURL: URL
@@ -65,6 +67,19 @@ enum OptimizationService {
         }
     }
 
+    static func convert(sourceURL: URL, target: QuickAccessConversionTarget) async throws -> OptimizationResult {
+        try await withCheckedThrowingContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    let result = try convertSynchronously(sourceURL: sourceURL, target: target)
+                    continuation.resume(returning: result)
+                } catch {
+                    continuation.resume(throwing: error)
+                }
+            }
+        }
+    }
+
     private static func optimizeSynchronously(sourceURL: URL, kind: QuickAccessFileKind) throws -> OptimizationResult {
         guard kind.isSupported else { throw OptimizationError.unsupportedType }
 
@@ -86,6 +101,37 @@ enum OptimizationService {
             try runVips(sourceURL: sourceURL, outputURL: outputURL)
         case .unknown:
             throw OptimizationError.unsupportedType
+        }
+
+        guard FileManager.default.fileExists(atPath: outputURL.path) else {
+            throw OptimizationError.outputMissing
+        }
+
+        return OptimizationResult(
+            outputURL: outputURL,
+            originalBytes: originalBytes,
+            optimizedBytes: fileSize(at: outputURL),
+            pixelSize: NSImage(contentsOf: outputURL)?.pixelSizeForOptimization
+        )
+    }
+
+    private static func convertSynchronously(sourceURL: URL, target: QuickAccessConversionTarget) throws -> OptimizationResult {
+        let sourceKind = QuickAccessFileKind.detect(from: sourceURL)
+        guard QuickAccessConversionTarget.targets(for: sourceKind).contains(target) else {
+            throw OptimizationError.unsupportedType
+        }
+
+        let originalBytes = fileSize(at: sourceURL)
+        let outputURL = try makeOutputURL(
+            for: sourceURL,
+            nameComponent: "converted-\(target.fileExtension)",
+            pathExtension: target.fileExtension
+        )
+
+        if target.isImageTarget {
+            try runImageConversion(sourceURL: sourceURL, outputURL: outputURL, target: target)
+        } else {
+            try runVideoConversion(sourceURL: sourceURL, outputURL: outputURL, target: target)
         }
 
         guard FileManager.default.fileExists(atPath: outputURL.path) else {
@@ -199,10 +245,133 @@ enum OptimizationService {
         )
     }
 
+    private static func runImageConversion(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) throws {
+        if target == .webp {
+            try runVipsFormatConversion(sourceURL: sourceURL, outputURL: outputURL, target: target)
+            return
+        }
+
+        guard let typeIdentifier = UTType(filenameExtension: target.fileExtension)?.identifier,
+              let source = CGImageSourceCreateWithURL(sourceURL as CFURL, nil),
+              let destination = CGImageDestinationCreateWithURL(outputURL as CFURL, typeIdentifier as CFString, 1, nil) else {
+            throw OptimizationError.commandFailed("\(target.displayName) conversion unavailable")
+        }
+
+        let options = imageConversionOptions(for: target)
+        CGImageDestinationAddImageFromSource(destination, source, 0, options as CFDictionary)
+
+        guard CGImageDestinationFinalize(destination) else {
+            throw OptimizationError.commandFailed("\(target.displayName) conversion failed")
+        }
+    }
+
+    private static func runVipsFormatConversion(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) throws {
+        let executable = try requiredExecutable("vips")
+        let outputPath: String
+
+        switch target {
+        case .webp:
+            outputPath = "\(outputURL.path)[Q=92]"
+        case .png, .jpeg, .heic, .gif, .mov, .mp4:
+            outputPath = outputURL.path
+        }
+
+        try run(
+            executable,
+            arguments: [
+                "copy",
+                sourceURL.path,
+                outputPath
+            ]
+        )
+    }
+
+    private static func runVideoConversion(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) throws {
+        switch target {
+        case .gif:
+            if QuickAccessFileKind.detect(from: sourceURL) == .gif {
+                try runGifsicle(sourceURL: sourceURL, outputURL: outputURL)
+            } else {
+                try runVideoToGIFConversion(sourceURL: sourceURL, outputURL: outputURL)
+            }
+        case .mov, .mp4:
+            try runFFmpegContainerConversion(sourceURL: sourceURL, outputURL: outputURL, target: target)
+        case .png, .jpeg, .webp, .heic:
+            throw OptimizationError.unsupportedType
+        }
+    }
+
+    private static func runVideoToGIFConversion(sourceURL: URL, outputURL: URL) throws {
+        if let executable = OptimizationToolResolver.executable(named: "gifski") {
+            do {
+                try run(
+                    executable,
+                    arguments: [
+                        "--fps", "15",
+                        "--width", "720",
+                        "--quality", "82",
+                        "--output", outputURL.path,
+                        sourceURL.path
+                    ]
+                )
+                return
+            } catch {
+                try? FileManager.default.removeItem(at: outputURL)
+            }
+        }
+
+        try runFFmpegGIFConversion(sourceURL: sourceURL, outputURL: outputURL)
+    }
+
+    private static func runFFmpegGIFConversion(sourceURL: URL, outputURL: URL) throws {
+        let executable = try requiredExecutable("ffmpeg")
+        try run(
+            executable,
+            arguments: [
+                "-y",
+                "-i", sourceURL.path,
+                "-filter_complex",
+                "[0:v]fps=15,scale=720:-1:flags=lanczos:force_original_aspect_ratio=decrease,split[v0][v1];[v0]palettegen[p];[v1][p]paletteuse=dither=sierra2_4a[gif]",
+                "-map", "[gif]",
+                "-loop", "0",
+                outputURL.path
+            ]
+        )
+    }
+
+    private static func runFFmpegContainerConversion(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) throws {
+        let executable = try requiredExecutable("ffmpeg")
+        do {
+            try run(
+                executable,
+                arguments: ffmpegRemuxArguments(sourceURL: sourceURL, outputURL: outputURL, target: target)
+            )
+        } catch {
+            try? FileManager.default.removeItem(at: outputURL)
+            try run(
+                executable,
+                arguments: ffmpegTranscodeArguments(sourceURL: sourceURL, outputURL: outputURL, target: target)
+            )
+        }
+    }
+
     private static func makeOutputURL(for sourceURL: URL, kind: QuickAccessFileKind) throws -> URL {
-        let directory = try outputDirectory()
-        let baseName = sourceURL.deletingPathExtension().lastPathComponent
-        let suffix = UUID().uuidString.prefix(8)
         let pathExtension: String
 
         switch kind {
@@ -214,9 +383,76 @@ enum OptimizationService {
             pathExtension = sourceURL.pathExtension
         }
 
+        return try makeOutputURL(
+            for: sourceURL,
+            nameComponent: "optimized",
+            pathExtension: pathExtension
+        )
+    }
+
+    private static func makeOutputURL(
+        for sourceURL: URL,
+        nameComponent: String,
+        pathExtension: String
+    ) throws -> URL {
+        let directory = try outputDirectory()
+        let baseName = sourceURL.deletingPathExtension().lastPathComponent
+        let suffix = UUID().uuidString.prefix(8)
+
         return directory
-            .appendingPathComponent("\(baseName)-optimized-\(suffix)")
+            .appendingPathComponent("\(baseName)-\(nameComponent)-\(suffix)")
             .appendingPathExtension(pathExtension)
+    }
+
+    private static func imageConversionOptions(for target: QuickAccessConversionTarget) -> [CFString: Any] {
+        switch target {
+        case .jpeg, .webp, .heic:
+            return [kCGImageDestinationLossyCompressionQuality: 0.92]
+        case .png, .gif, .mov, .mp4:
+            return [:]
+        }
+    }
+
+    private static func ffmpegRemuxArguments(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) -> [String] {
+        var arguments = [
+            "-y",
+            "-i", sourceURL.path,
+            "-map", "0",
+            "-map_metadata", "-1",
+            "-c", "copy"
+        ]
+        if target == .mp4 {
+            arguments += ["-movflags", "+faststart"]
+        }
+        arguments.append(outputURL.path)
+        return arguments
+    }
+
+    private static func ffmpegTranscodeArguments(
+        sourceURL: URL,
+        outputURL: URL,
+        target: QuickAccessConversionTarget
+    ) -> [String] {
+        var arguments = [
+            "-y",
+            "-i", sourceURL.path,
+            "-map_metadata", "-1",
+            "-c:v", "libx264",
+            "-preset", "medium",
+            "-crf", "20",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac",
+            "-b:a", "160k"
+        ]
+        if target == .mp4 {
+            arguments += ["-movflags", "+faststart"]
+        }
+        arguments.append(outputURL.path)
+        return arguments
     }
 
     private static func outputDirectory() throws -> URL {
