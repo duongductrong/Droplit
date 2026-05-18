@@ -1,16 +1,26 @@
 import AppKit
 import SwiftUI
 
+private enum QuickAccessCardDragMode {
+    case undetermined
+    case swipeToDismiss
+    case externalDrag
+    case unavailable
+}
+
 struct QuickAccessCardView: View {
     let item: QuickAccessItem
     @ObservedObject var manager: QuickAccessManager
     @State private var isHovering = false
     @State private var isDismissing = false
     @State private var isDraggingToDismiss = false
+    @State private var isDraggingExternally = false
+    @State private var dragMode: QuickAccessCardDragMode = .undetermined
     @State private var swipeOffset: CGFloat = 0
     @State private var dismissTask: Task<Void, Never>?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private let dragDirectionThreshold: CGFloat = 30
     private let swipeDismissThreshold: CGFloat = 74
     private let swipeVelocityThreshold: CGFloat = 320
 
@@ -26,9 +36,11 @@ struct QuickAccessCardView: View {
         .opacity(cardOpacity)
         .offset(x: reduceMotion ? 0 : swipeOffset)
         .rotationEffect(.degrees(reduceMotion ? 0 : Double(swipeOffset) * 0.035))
-        .gesture(swipeDismissGesture)
+        .gesture(cardDragGesture)
         .onDisappear {
             isDraggingToDismiss = false
+            isDraggingExternally = false
+            dragMode = .undetermined
             dismissTask?.cancel()
         }
     }
@@ -60,7 +72,7 @@ struct QuickAccessCardView: View {
         .compositingGroup()
         .quickAccessCardShadow(isRaised: isHovering)
         .scaleEffect(isHovering && !reduceMotion ? 1.008 : 1)
-        .quickAccessCursor(isDraggingToDismiss ? .closedHand : .pointingHand)
+        .quickAccessCursor(isDraggingToDismiss || isDraggingExternally ? .closedHand : .pointingHand)
         .onHover { hovering in
             withAnimation(QuickAccessAnimations.hoverOverlay) {
                 isHovering = hovering
@@ -171,40 +183,109 @@ struct QuickAccessCardView: View {
     }
 
     private var cardOpacity: Double {
+        if isDraggingExternally {
+            return 0.62
+        }
         guard !reduceMotion else { return isDismissing ? 0 : 1 }
         let minimumOpacity = isDismissing ? 0 : 0.32
         return max(minimumOpacity, 1 - Double(abs(swipeOffset)) / 190)
     }
 
-    private var swipeDismissGesture: some Gesture {
+    private var cardDragGesture: some Gesture {
         DragGesture(minimumDistance: 6)
             .onChanged { value in
                 guard !isDismissing else { return }
-                isDraggingToDismiss = true
+                resolveDragModeIfNeeded(for: value.translation)
 
-                if reduceMotion {
-                    swipeOffset = 0
-                } else {
-                    swipeOffset = value.translation.width
+                if dragMode == .swipeToDismiss {
+                    isDraggingToDismiss = true
+                    swipeOffset = reduceMotion ? 0 : value.translation.width
                 }
             }
             .onEnded { value in
                 guard !isDismissing else { return }
-                isDraggingToDismiss = false
 
-                let translation = value.translation.width
-                let isHorizontal = abs(translation) > abs(value.translation.height)
-                let shouldDismiss = isHorizontal
-                    && (abs(translation) > swipeDismissThreshold || abs(value.predictedEndTranslation.width) > swipeVelocityThreshold)
-
-                if shouldDismiss {
-                    dismissCard(inDirection: translation == 0 ? manager.position.dismissDirection : translation)
+                if dragMode == .swipeToDismiss {
+                    finishSwipeDismiss(value)
                 } else {
-                    withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
-                        swipeOffset = 0
-                    }
+                    resetSwipeState()
                 }
+                dragMode = .undetermined
             }
+    }
+
+    private func resolveDragModeIfNeeded(for translation: CGSize) {
+        guard dragMode == .undetermined,
+              hypot(translation.width, translation.height) > dragDirectionThreshold else {
+            return
+        }
+
+        if isDismissTranslation(translation) {
+            dragMode = .swipeToDismiss
+        } else if beginExternalDragIfPossible() {
+            dragMode = .externalDrag
+        } else {
+            dragMode = .unavailable
+        }
+    }
+
+    private func isDismissTranslation(_ translation: CGSize) -> Bool {
+        let horizontalDominance = abs(translation.width) >= max(abs(translation.height) * 0.75, 12)
+        return horizontalDominance && translation.width * manager.position.dismissDirection > 0
+    }
+
+    private func finishSwipeDismiss(_ value: DragGesture.Value) {
+        isDraggingToDismiss = false
+
+        let translation = value.translation.width
+        let shouldDismiss = isDismissTranslation(value.translation)
+            && (abs(translation) > swipeDismissThreshold || abs(value.predictedEndTranslation.width) > swipeVelocityThreshold)
+
+        if shouldDismiss {
+            dismissCard(inDirection: translation == 0 ? manager.position.dismissDirection : translation)
+        } else {
+            resetSwipeState()
+        }
+    }
+
+    private func resetSwipeState() {
+        isDraggingToDismiss = false
+        if reduceMotion {
+            swipeOffset = 0
+        } else {
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                swipeOffset = 0
+            }
+        }
+    }
+
+    private func beginExternalDragIfPossible() -> Bool {
+        guard let dragURL = externalDragURL else { return false }
+
+        isDraggingExternally = true
+        let didBegin = QuickAccessExternalDragSession.begin(
+            fileURL: dragURL,
+            thumbnail: item.thumbnail
+        ) { success in
+            isDraggingExternally = false
+            if success {
+                manager.removeItem(id: item.id)
+            }
+        }
+
+        if !didBegin {
+            isDraggingExternally = false
+        }
+        return didBegin
+    }
+
+    private var externalDragURL: URL? {
+        guard item.state == .completed,
+              let outputURL = item.outputURL,
+              FileManager.default.fileExists(atPath: outputURL.path) else {
+            return nil
+        }
+        return outputURL
     }
 
     private func dismissCard(inDirection direction: CGFloat) {

@@ -36,6 +36,7 @@ Droplit/
         QuickAccessCardView.swift
         QuickAccessDropReceiverView.swift
         QuickAccessDropZoneCardView.swift
+        QuickAccessExternalDragSource.swift
         QuickAccessStackView.swift
       Managers/
         QuickAccessManager.swift
@@ -107,9 +108,11 @@ docs/
 19. Video/GIF conversion targets are GIF, MOV, and MP4.
 20. Conversion actions always read `QuickAccessItem.sourceURL`, not the optimized output URL, so repeated switches do not chain from a compressed/downscaled derivative.
 21. Swipe a Quick Access result card left or right to dismiss that card.
-22. Double-click a card to open the optimized or converted output, falling back to the source file when output is unavailable.
-23. Completed Quick Access cards stay visible for 15 seconds, then auto-hide.
-24. The floating Quick Access stack shows the newest cards plus an overflow summary when the queue is larger than the panel should display.
+22. Drag a completed Quick Access card away from its dismiss direction to drop the optimized or converted output into external apps.
+23. External card drag uses an AppKit `NSDraggingSession` with the output file URL as an `NSURL` pasteboard writer for broad Finder, native app, and browser compatibility.
+24. Double-click a card to open the optimized or converted output, falling back to the source file when output is unavailable.
+25. Completed Quick Access cards stay visible for 15 seconds, then auto-hide.
+26. The floating Quick Access stack shows the newest cards plus an overflow summary when the queue is larger than the panel should display.
 
 Output folder is changed from main window Output configuration.
 Parallel job count is changed from main window Concurrency configuration.
