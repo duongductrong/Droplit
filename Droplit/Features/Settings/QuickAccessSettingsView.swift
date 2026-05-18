@@ -63,7 +63,7 @@ struct QuickAccessSettingsView: View {
 
             DroplitSettingsGroup(
                 "Capacity",
-                description: "Control queue throughput and preview the floating Quick Access surface."
+                description: "Control optimization throughput and preview the floating Quick Access surface."
             ) {
                 DroplitSettingsControlRow(
                     title: "Concurrent Jobs",
@@ -80,7 +80,6 @@ struct QuickAccessSettingsView: View {
                     Button("Show Preview") {
                         quickAccess.showDropPlaceholder()
                     }
-                    .controlSize(.small)
                 }
             }
         }

@@ -19,31 +19,36 @@ private enum DroplitSettingsMetrics {
 struct DroplitSettingsPage<Content: View>: View {
     let title: String
     let subtitle: String
+    let showsHeader: Bool
     private let content: Content
 
     init(
         title: String,
         subtitle: String,
+        showsHeader: Bool = true,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
         self.subtitle = subtitle
+        self.showsHeader = showsHeader
         self.content = content()
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: DroplitSettingsMetrics.pageSpacing) {
-                VStack(alignment: .leading, spacing: DroplitSettingsMetrics.pageHeaderSpacing) {
-                    Text(title)
-                        .font(.title.weight(.semibold))
+                if showsHeader {
+                    VStack(alignment: .leading, spacing: DroplitSettingsMetrics.pageHeaderSpacing) {
+                        Text(title)
+                            .font(.title.weight(.semibold))
 
-                    Text(subtitle)
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Text(subtitle)
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.top, -DroplitSettingsMetrics.pageHeaderLift)
                 }
-                .padding(.top, -DroplitSettingsMetrics.pageHeaderLift)
 
                 content
             }

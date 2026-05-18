@@ -53,7 +53,6 @@ struct ToolsSettingsView: View {
                     await installMissingTools()
                 }
             }
-            .controlSize(.small)
             .disabled(!HomebrewBootstrapService.isHomebrewAvailable)
             .help(HomebrewBootstrapService.isHomebrewAvailable ? "Install missing tools" : "Homebrew not found")
         }

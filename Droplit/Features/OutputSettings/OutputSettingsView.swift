@@ -34,7 +34,6 @@ struct OutputSettingsView: View {
                         Button("Choose...") {
                             chooseOutputDirectory()
                         }
-                        .controlSize(.small)
                     } else {
                         Text("Managed by Droplit")
                             .foregroundStyle(.secondary)

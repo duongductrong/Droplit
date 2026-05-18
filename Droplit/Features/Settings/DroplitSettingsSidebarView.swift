@@ -6,6 +6,11 @@ struct DroplitSettingsSidebarView: View {
 
     var body: some View {
         List(selection: canonicalSelection) {
+            ForEach(filteredStandaloneSections) { section in
+                sidebarRow(section)
+                    .tag(section as DroplitSettingsSection?)
+            }
+
             ForEach(filteredGroups) { group in
                 Section {
                     ForEach(group.sections) { section in
@@ -22,7 +27,7 @@ struct DroplitSettingsSidebarView: View {
         .listStyle(.sidebar)
         .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 280)
         .overlay {
-            if filteredGroups.isEmpty {
+            if !hasFilteredResults {
                 ContentUnavailableView.search(text: searchText)
             }
         }
@@ -38,6 +43,14 @@ struct DroplitSettingsSidebarView: View {
                     sections: filteredSections
                 )
             }
+    }
+
+    private var filteredStandaloneSections: [DroplitSettingsSection] {
+        DroplitSettingsSection.standaloneSections.filter { $0.matches(searchText) }
+    }
+
+    private var hasFilteredResults: Bool {
+        !filteredStandaloneSections.isEmpty || !filteredGroups.isEmpty
     }
 
     private var canonicalSelection: Binding<DroplitSettingsSection?> {

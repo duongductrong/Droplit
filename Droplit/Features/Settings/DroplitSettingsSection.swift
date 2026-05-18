@@ -25,34 +25,34 @@ enum DroplitSettingsSection: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .general: "General"
+        case .general: "About"
         case .quickAccess: "Quick Access"
-        case .output: "Output"
+        case .output: "Output & Storage"
         case .conversion: "Conversion"
-        case .tools: "Tools"
-        case .queue: "Queue"
+        case .tools: "Optimizer Tools"
+        case .queue: "Media Optimization"
         case .concurrency: "Concurrency"
         case .storage: "Storage"
         case .appearance: "Appearance"
         case .privacy: "Privacy"
-        case .advanced: "Advanced"
-        case .about: "About Droplit"
+        case .advanced: "Advanced Settings"
+        case .about: "About"
         }
     }
 
     var subtitle: String {
         switch self {
-        case .general: "Overview and shortcuts"
+        case .general: "App details and shortcuts"
         case .quickAccess: "Trigger, placement, and concurrency"
         case .output: "Save location, storage, and conversion output"
         case .conversion: "How converted files are written"
-        case .tools: "Optimizer availability and Homebrew install"
-        case .queue: "Current and recent optimization jobs"
+        case .tools: "Optimizer availability and setup"
+        case .queue: "Current optimization jobs and imports"
         case .concurrency: "Parallel optimization limits"
         case .storage: "Temporary output retention"
         case .appearance: "Window, material, and control style"
         case .privacy: "Local processing and file handling"
-        case .advanced: "Power-user defaults and recovery"
+        case .advanced: "Defaults, recovery, and power-user details"
         case .about: "Version, build, and app details"
         }
     }
@@ -102,18 +102,16 @@ enum DroplitSettingsSection: String, CaseIterable, Identifiable {
 
     static let sidebarGroups: [DroplitSettingsSidebarGroup] = [
         DroplitSettingsSidebarGroup(
-            title: "Setup",
-            sections: [.general, .quickAccess, .output]
+            title: "Settings",
+            sections: [.quickAccess, .output, .appearance, .privacy, .advanced]
         ),
         DroplitSettingsSidebarGroup(
-            title: "Activity",
+            title: "Tool",
             sections: [.tools, .queue]
-        ),
-        DroplitSettingsSidebarGroup(
-            title: "Application",
-            sections: [.appearance, .privacy, .advanced, .about]
         )
     ]
+
+    static let standaloneSections: [DroplitSettingsSection] = [.about]
 
     func matches(_ query: String) -> Bool {
         let cleanedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)

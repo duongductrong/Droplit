@@ -10,7 +10,7 @@ import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject private var quickAccess = QuickAccessManager.shared
-    @State private var selectedSection: DroplitSettingsSection? = .general
+    @State private var selectedSection: DroplitSettingsSection? = .about
     @State private var searchText = ""
     @State private var isImporting = false
 
@@ -46,7 +46,7 @@ struct ContentView: View {
 
     private var selectedSectionBinding: Binding<DroplitSettingsSection> {
         Binding(
-            get: { (selectedSection ?? .general).canonicalSection },
+            get: { (selectedSection ?? .about).canonicalSection },
             set: { selectedSection = $0.canonicalSection }
         )
     }

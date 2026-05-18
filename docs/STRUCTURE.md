@@ -167,16 +167,16 @@ Parallel job count is changed from main window Concurrency configuration.
 ## Settings UI
 
 1. `ContentView` owns the main configuration window shell, `NavigationSplitView`, search state, and file importer.
-2. `DroplitSettingsSidebarView` renders the native source-list sidebar and relies on split-view `searchable` for filtering.
+2. `DroplitSettingsSidebarView` renders the native source-list sidebar, including standalone About plus grouped Settings and Tool sections, and relies on split-view `searchable` for filtering.
 3. `DroplitSettingsDetailView` switches between detail pages based on `DroplitSettingsSection`.
 4. `DroplitSettingsPage` provides the shared heading plus scroll layout for every detail page.
 5. `DroplitSettingsGroup`, `DroplitSettingsControlRow`, `DroplitSettingsValueRow`, and `DroplitSettingsAlignedRow` provide the shared native settings row treatment.
-6. `GeneralSettingsView` is the default landing page and links into feature-specific settings.
+6. `InfoSettingsView` About is the default standalone landing page.
 7. `QuickAccessSettingsView` owns Quick Access trigger, placement, preview, and concurrency controls.
 8. `OutputSettingsView` owns save location, destination folder, temp retention, and conversion output behavior.
 9. `ToolsSettingsView` owns optimizer status and Homebrew install action.
-10. `QueueSettingsView` owns visible queue status, remove actions, and file import entry point.
-11. `InfoSettingsView` owns lightweight appearance, privacy, advanced, and about details.
+10. `QueueSettingsView` owns the Media Optimization status, remove actions, and file import entry point.
+11. `InfoSettingsView` owns lightweight appearance, privacy, advanced settings, and the About identity/application details.
 
 ## Homebrew Bootstrap Flow
 

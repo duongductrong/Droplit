@@ -8,7 +8,7 @@ struct GeneralSettingsView: View {
     var body: some View {
         DroplitSettingsPage(
             title: DroplitSettingsSection.general.title,
-            subtitle: "Manage Quick Access, output, tools, and queue behavior from a single native macOS settings surface."
+            subtitle: "Manage Quick Access, output, tools, and media optimization from a single native macOS settings surface."
         ) {
             DroplitSettingsGroup(
                 "Overview",
@@ -71,16 +71,15 @@ struct GeneralSettingsView: View {
 
             DroplitSettingsGroup(
                 "Actions",
-                description: "Jump into the queue or import files without leaving settings."
+                description: "Open media optimization or import files without leaving settings."
             ) {
                 DroplitSettingsControlRow(
                     title: "Optimize Files",
-                    subtitle: "Import files directly into the queue"
+                    subtitle: "Import files directly into media optimization"
                 ) {
                     Button("Choose...") {
                         isImporting = true
                     }
-                    .controlSize(.small)
                 }
                 DroplitSettingsDivider()
                 DroplitSettingsNavigationRow(

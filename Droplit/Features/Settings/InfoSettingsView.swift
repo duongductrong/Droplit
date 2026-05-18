@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct InfoSettingsView: View {
@@ -6,7 +7,8 @@ struct InfoSettingsView: View {
     var body: some View {
         DroplitSettingsPage(
             title: section.title,
-            subtitle: section.subtitle
+            subtitle: section.subtitle,
+            showsHeader: section != .about
         ) {
             pageContent
         }
@@ -67,6 +69,8 @@ struct InfoSettingsView: View {
                 )
             }
         case .about:
+            aboutHeader
+
             DroplitSettingsGroup(
                 "Application",
                 description: "Current build information for the running app."
@@ -82,22 +86,13 @@ struct InfoSettingsView: View {
                     subtitle: "Useful for logging and defaults domains",
                     value: bundleIdentifier
                 )
-            }
-            DroplitSettingsGroup(
-                "Behavior",
-                description: "What Droplit optimizes and how it behaves on this Mac."
-            ) {
-                DroplitSettingsValueRow(
-                    title: "Processing Model",
-                    subtitle: "Quick media optimization powered by local CLI tools.",
-                    value: "Local"
-                )
                 DroplitSettingsDivider()
-                DroplitSettingsValueRow(
-                    title: "Output Model",
-                    subtitle: "Supports a chosen folder or managed temporary storage.",
-                    value: "Flexible"
-                )
+                DroplitSettingsControlRow(
+                    title: "Check for Updates",
+                    subtitle: "Manual update checks will be available in a future release."
+                ) {
+                    Button("Check for Updates") {}
+                }
             }
         default:
             DroplitSettingsGroup("Details") {
@@ -114,6 +109,29 @@ struct InfoSettingsView: View {
                 )
             }
         }
+    }
+
+    private var aboutHeader: some View {
+        VStack(alignment: .center, spacing: 12) {
+            Image(nsImage: NSApplication.shared.applicationIconImage)
+                .resizable()
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 104, height: 104)
+
+            VStack(alignment: .center, spacing: 4) {
+                Text(appName)
+                    .font(.title2.weight(.semibold))
+                    .multilineTextAlignment(.center)
+
+                Text(appSlogan)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
     }
 
     private var primaryTitle: String {
@@ -154,6 +172,16 @@ struct InfoSettingsView: View {
         let shortVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
         let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
         return "\(shortVersion) (\(buildNumber))"
+    }
+
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? "Droplit"
+    }
+
+    private var appSlogan: String {
+        "Quick media optimization for macOS."
     }
 
     private var bundleIdentifier: String {

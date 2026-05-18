@@ -11,16 +11,15 @@ struct QueueSettingsView: View {
         ) {
             DroplitSettingsGroup(
                 "Overview",
-                description: "Import more files or review the current queue state."
+                description: "Import more files or review the current optimization state."
             ) {
                 DroplitSettingsControlRow(
-                    title: "Queue Status",
+                    title: "Optimization Status",
                     subtitle: queueSummaryText
                 ) {
                     Button("Optimize...") {
                         isImporting = true
                     }
-                    .controlSize(.small)
                 }
             }
 
