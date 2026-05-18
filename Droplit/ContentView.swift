@@ -59,15 +59,6 @@ struct ContentView: View {
 
             Spacer()
 
-            Picker("Position", selection: $quickAccess.position) {
-                ForEach(QuickAccessPosition.allCases) { position in
-                    Label(position.displayName, systemImage: position.systemImage)
-                        .tag(position)
-                }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 240)
-
             Button {
                 quickAccess.showDropPlaceholder()
             } label: {
@@ -222,6 +213,22 @@ struct ContentView: View {
             }
             .pickerStyle(.segmented)
 
+            Picker("Edge", selection: quickAccessEdgeBinding) {
+                ForEach(QuickAccessPanelEdge.allCases) { edge in
+                    Label(edge.displayName, systemImage: edge.systemImage)
+                        .tag(edge)
+                }
+            }
+            .pickerStyle(.segmented)
+
+            Picker("Align", selection: quickAccessAlignmentBinding) {
+                ForEach(QuickAccessPanelAlignment.allCases) { alignment in
+                    Label(alignment.displayName, systemImage: alignment.systemImage)
+                        .tag(alignment)
+                }
+            }
+            .pickerStyle(.segmented)
+
             if quickAccess.triggerInteraction == .hold {
                 Stepper(
                     value: holdTriggerDurationBinding,
@@ -305,6 +312,20 @@ struct ContentView: View {
         Binding(
             get: { quickAccess.holdTriggerDuration },
             set: { quickAccess.setHoldTriggerDuration($0) }
+        )
+    }
+
+    private var quickAccessEdgeBinding: Binding<QuickAccessPanelEdge> {
+        Binding(
+            get: { quickAccess.position.edge },
+            set: { quickAccess.position = quickAccess.position.with(edge: $0) }
+        )
+    }
+
+    private var quickAccessAlignmentBinding: Binding<QuickAccessPanelAlignment> {
+        Binding(
+            get: { quickAccess.position.alignment },
+            set: { quickAccess.position = quickAccess.position.with(alignment: $0) }
         )
     }
 

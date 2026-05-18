@@ -2,55 +2,185 @@ import AppKit
 import Foundation
 import UniformTypeIdentifiers
 
+enum QuickAccessPanelEdge: String, CaseIterable, Codable, Identifiable {
+    case bottom
+    case top
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .bottom: "Bottom"
+        case .top: "Top"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .bottom: "arrow.down.to.line"
+        case .top: "arrow.up.to.line"
+        }
+    }
+}
+
+enum QuickAccessPanelAlignment: String, CaseIterable, Codable, Identifiable {
+    case left
+    case center
+    case right
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .left: "Left"
+        case .center: "Center"
+        case .right: "Right"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .left: "align.horizontal.left.fill"
+        case .center: "align.horizontal.center.fill"
+        case .right: "align.horizontal.right.fill"
+        }
+    }
+}
+
 enum QuickAccessPosition: String, CaseIterable, Codable, Identifiable {
+    case topLeft
+    case topCenter
+    case topRight
     case bottomLeft
     case bottomCenter
     case bottomRight
 
     var id: String { rawValue }
 
+    init(edge: QuickAccessPanelEdge, alignment: QuickAccessPanelAlignment) {
+        switch (edge, alignment) {
+        case (.top, .left): self = .topLeft
+        case (.top, .center): self = .topCenter
+        case (.top, .right): self = .topRight
+        case (.bottom, .left): self = .bottomLeft
+        case (.bottom, .center): self = .bottomCenter
+        case (.bottom, .right): self = .bottomRight
+        }
+    }
+
     var displayName: String {
         switch self {
-        case .bottomLeft: "Left"
-        case .bottomCenter: "Center"
-        case .bottomRight: "Right"
+        case .topLeft: "Top Left"
+        case .topCenter: "Top Center"
+        case .topRight: "Top Right"
+        case .bottomLeft: "Bottom Left"
+        case .bottomCenter: "Bottom Center"
+        case .bottomRight: "Bottom Right"
         }
     }
 
     var systemImage: String {
         switch self {
-        case .bottomLeft: "align.horizontal.left.fill"
-        case .bottomCenter: "align.horizontal.center.fill"
-        case .bottomRight: "align.horizontal.right.fill"
+        case .topLeft: "arrow.up.left.circle"
+        case .topCenter: "arrow.up.circle"
+        case .topRight: "arrow.up.right.circle"
+        case .bottomLeft: "arrow.down.left.circle"
+        case .bottomCenter: "arrow.down.circle"
+        case .bottomRight: "arrow.down.right.circle"
         }
     }
 
-    var isLeftSide: Bool { self == .bottomLeft }
+    var edge: QuickAccessPanelEdge {
+        switch self {
+        case .topLeft, .topCenter, .topRight: .top
+        case .bottomLeft, .bottomCenter, .bottomRight: .bottom
+        }
+    }
+
+    var alignment: QuickAccessPanelAlignment {
+        switch self {
+        case .topLeft, .bottomLeft: .left
+        case .topCenter, .bottomCenter: .center
+        case .topRight, .bottomRight: .right
+        }
+    }
+
+    var isTopEdge: Bool { edge == .top }
+    var isLeftSide: Bool { alignment == .left }
     var dismissDirection: CGFloat { isLeftSide ? -1 : 1 }
+
+    func with(edge newEdge: QuickAccessPanelEdge) -> QuickAccessPosition {
+        QuickAccessPosition(edge: newEdge, alignment: alignment)
+    }
+
+    func with(alignment newAlignment: QuickAccessPanelAlignment) -> QuickAccessPosition {
+        QuickAccessPosition(edge: edge, alignment: newAlignment)
+    }
 
     func calculateOrigin(for size: CGSize, on screen: NSScreen, padding: CGFloat = 22) -> CGPoint {
         let frame = screen.visibleFrame
         let shadowMargin = QuickAccessLayout.shadowMargin
-        switch self {
-        case .bottomLeft:
-            return CGPoint(x: frame.minX + padding - shadowMargin, y: frame.minY + padding - shadowMargin)
-        case .bottomCenter:
-            return CGPoint(x: frame.midX - size.width / 2, y: frame.minY + padding - shadowMargin)
-        case .bottomRight:
-            return CGPoint(x: frame.maxX - size.width - padding + shadowMargin, y: frame.minY + padding - shadowMargin)
+        let x: CGFloat
+        switch alignment {
+        case .left:
+            x = frame.minX + padding - shadowMargin
+        case .center:
+            x = frame.midX - size.width / 2
+        case .right:
+            x = frame.maxX - size.width - padding + shadowMargin
         }
+
+        let y = panelY(
+            matchingCardBoundary: cardBoundaryY(on: screen, padding: padding),
+            size: size,
+            shadowMargin: shadowMargin
+        )
+
+        return CGPoint(x: x, y: y)
     }
 
     func offscreenOrigin(for size: CGSize, on screen: NSScreen, padding: CGFloat = 22) -> CGPoint {
         let frame = screen.visibleFrame
         let margin: CGFloat = 48
-        switch self {
-        case .bottomLeft:
+        if isTopEdge {
+            let targetOrigin = calculateOrigin(for: size, on: screen, padding: padding)
+            return CGPoint(x: targetOrigin.x, y: frame.maxY + margin)
+        }
+
+        switch alignment {
+        case .left:
             return CGPoint(x: frame.minX - size.width - margin, y: frame.minY + padding)
-        case .bottomCenter:
+        case .center:
             return CGPoint(x: frame.midX - size.width / 2, y: frame.minY - size.height - margin)
-        case .bottomRight:
+        case .right:
             return CGPoint(x: frame.maxX + margin, y: frame.minY + padding)
+        }
+    }
+
+    private func cardBoundaryY(on screen: NSScreen, padding: CGFloat) -> CGFloat {
+        let frame = screen.visibleFrame
+        switch edge {
+        case .bottom:
+            return frame.minY + padding
+        case .top:
+            return frame.maxY + topSafeAreaCompensation(on: screen) - padding
+        }
+    }
+
+    private func topSafeAreaCompensation(on screen: NSScreen) -> CGFloat {
+        let frameInset = screen.frame.maxY - screen.visibleFrame.maxY
+        if #available(macOS 12.0, *) {
+            return max(frameInset, screen.safeAreaInsets.top)
+        }
+        return frameInset
+    }
+
+    private func panelY(matchingCardBoundary boundaryY: CGFloat, size: CGSize, shadowMargin: CGFloat) -> CGFloat {
+        switch edge {
+        case .bottom:
+            return boundaryY - shadowMargin
+        case .top:
+            return boundaryY + shadowMargin - size.height
         }
     }
 }
@@ -96,7 +226,7 @@ enum QuickAccessLayout {
     static let topControlTopPadding: CGFloat = 4
     static let cornerRadius: CGFloat = 14
     static let cardSpacing: CGFloat = 10
-    static let shadowMargin: CGFloat = 44
+    static let shadowMargin: CGFloat = 58
     static let containerPadding: CGFloat = shadowMargin
     static let maximumFloatingItems = 4
 

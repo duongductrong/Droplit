@@ -16,6 +16,9 @@ compact controls, and rounded utility surfaces.
 | `color.surface.materialSubtle` | `.thinMaterial` | Disabled/processing chip surface |
 | `color.stroke.card` | White at 16% opacity | Quick Access card border |
 | `color.stroke.control` | White at 20% opacity | Inactive small control border |
+| `color.overlay.thumbnailTop` | Accent at 18% opacity fading to transparent | Quick Access thumbnail top readability layer |
+| `color.overlay.thumbnailBottom` | Black at 66% opacity fading upward | Quick Access card content readability |
+| `color.shadow.card` | Black at 4-11% opacity | Soft Quick Access card separation shadow |
 
 ## Typography
 
@@ -46,7 +49,7 @@ compact controls, and rounded utility surfaces.
 | `space.cardStackGap` | 10 | Vertical card stack spacing |
 | `space.conversionRowGap` | 3 | Gap between card and conversion row |
 | `space.conversionButtonGap` | 3 | Horizontal gap between conversion buttons |
-| `space.panelPadding` | 44 | Floating panel shadow/padding allowance |
+| `space.panelPadding` | 58 | Floating panel shadow/padding allowance |
 | `space.cardContentX` | 12 | Card lower content horizontal padding |
 
 ## Radius
@@ -67,9 +70,20 @@ compact controls, and rounded utility surfaces.
 | `disabledProcessingInactive` | 42% opacity, no click action |
 | `defaultSourceConversion` | Active state inferred from source extension when target exists |
 
+## Shadow
+
+| Token | Value | Usage |
+| --- | --- | --- |
+| `shadow.quickAccessCard.ambient` | 29-34 radius, 12-15 y, black 8-11% | Main floating card lift |
+| `shadow.quickAccessCard.contact` | 8-11 radius, 3-4 y, black 4-5.5% | Close contact shadow under the card |
+
 ## Implementation Map
 
 - Quick Access dimensions live in `QuickAccessLayout`.
+- Quick Access shadow allowance lives in `QuickAccessLayout.shadowMargin`.
+- Quick Access card shadows use `quickAccessCardShadow(isRaised:)`.
+- Quick Access placement uses `QuickAccessPanelEdge` plus `QuickAccessPanelAlignment`; top placement enters from the upper edge and mirrors bottom stack anchoring.
+- Top placement compensates for menu/notch safe area so the visual card-boundary inset matches bottom placement; `shadowMargin` only extends the transparent panel canvas.
 - Conversion active state lives on `QuickAccessItem.activeConversionTarget`.
 - Active color resolves through `NSColor.controlAccentColor`; fallback is system blue.
 - Active quick action text is always white; active fill keeps the macOS accent color with a subtle dark overlay for readability.

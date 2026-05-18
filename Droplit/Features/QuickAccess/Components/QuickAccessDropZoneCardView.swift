@@ -65,9 +65,7 @@ struct QuickAccessDropZoneCardView: View {
         .frame(width: QuickAccessLayout.cardWidth, height: QuickAccessLayout.cardHeight)
         .clipShape(cardShape)
         .compositingGroup()
-        .shadow(color: .black.opacity(isTargeted ? 0.11 : 0.075), radius: isTargeted ? 30 : 26, x: 0, y: isTargeted ? 13 : 10)
-        .shadow(color: .black.opacity(isTargeted ? 0.08 : 0.055), radius: isTargeted ? 12 : 9, x: 0, y: isTargeted ? 5 : 4)
-        .shadow(color: .black.opacity(isTargeted ? 0.05 : 0.035), radius: isTargeted ? 2.5 : 2, x: 0, y: 1)
+        .quickAccessCardShadow(isRaised: isTargeted)
     }
 
     private var cardShape: RoundedRectangle {

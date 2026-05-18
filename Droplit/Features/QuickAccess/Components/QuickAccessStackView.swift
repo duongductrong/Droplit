@@ -6,22 +6,12 @@ struct QuickAccessStackView: View {
 
     var body: some View {
         VStack(spacing: QuickAccessLayout.cardSpacing) {
-            Spacer(minLength: 0)
-
-            if manager.hasOverflowCard {
-                QuickAccessOverflowCardView(manager: manager)
-                    .transition(cardTransition)
-            }
-
-            ForEach(manager.floatingItems) { item in
-                QuickAccessCardView(item: item, manager: manager)
-                    .id(item.id)
-                    .transition(cardTransition)
-            }
-
-            if manager.isDropPlaceholderVisible {
-                QuickAccessDropZoneCardView(manager: manager)
-                    .transition(cardTransition)
+            if manager.position.isTopEdge {
+                positionedCards
+                Spacer(minLength: 0)
+            } else {
+                Spacer(minLength: 0)
+                positionedCards
             }
         }
         .padding(QuickAccessLayout.containerPadding)
@@ -40,16 +30,75 @@ struct QuickAccessStackView: View {
         )
     }
 
+    @ViewBuilder
+    private var positionedCards: some View {
+        if manager.position.isTopEdge {
+            if manager.isDropPlaceholderVisible {
+                QuickAccessDropZoneCardView(manager: manager)
+                    .transition(cardTransition)
+            }
+
+            ForEach(floatingItemsInVisualOrder) { item in
+                QuickAccessCardView(item: item, manager: manager)
+                    .id(item.id)
+                    .transition(cardTransition)
+            }
+
+            if manager.hasOverflowCard {
+                QuickAccessOverflowCardView(manager: manager)
+                    .transition(cardTransition)
+            }
+        } else {
+            if manager.hasOverflowCard {
+                QuickAccessOverflowCardView(manager: manager)
+                    .transition(cardTransition)
+            }
+
+            ForEach(floatingItemsInVisualOrder) { item in
+                QuickAccessCardView(item: item, manager: manager)
+                    .id(item.id)
+                    .transition(cardTransition)
+            }
+
+            if manager.isDropPlaceholderVisible {
+                QuickAccessDropZoneCardView(manager: manager)
+                    .transition(cardTransition)
+            }
+        }
+    }
+
     private var cardTransition: AnyTransition {
         if reduceMotion {
             return .opacity
         }
         return .asymmetric(
-            insertion: .move(edge: manager.position.isLeftSide ? .leading : .trailing)
+            insertion: .move(edge: transitionEdge)
                 .combined(with: .opacity),
-            removal: .move(edge: manager.position.isLeftSide ? .leading : .trailing)
+            removal: .move(edge: transitionEdge)
                 .combined(with: .opacity)
         )
+    }
+
+    private var transitionEdge: Edge {
+        if manager.position.isTopEdge {
+            return .top
+        }
+
+        switch manager.position.alignment {
+        case .left:
+            return .leading
+        case .center:
+            return .bottom
+        case .right:
+            return .trailing
+        }
+    }
+
+    private var floatingItemsInVisualOrder: [QuickAccessItem] {
+        if manager.position.isTopEdge {
+            return manager.floatingItems
+        }
+        return Array(manager.floatingItems.reversed())
     }
 }
 
@@ -73,9 +122,7 @@ private struct QuickAccessOverflowCardView: View {
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(.white.opacity(0.16), lineWidth: 1))
         .compositingGroup()
-        .shadow(color: .black.opacity(isHovering ? 0.11 : 0.075), radius: isHovering ? 30 : 26, x: 0, y: isHovering ? 13 : 10)
-        .shadow(color: .black.opacity(isHovering ? 0.08 : 0.055), radius: isHovering ? 12 : 9, x: 0, y: isHovering ? 5 : 4)
-        .shadow(color: .black.opacity(isHovering ? 0.05 : 0.035), radius: isHovering ? 2.5 : 2, x: 0, y: 1)
+        .quickAccessCardShadow(isRaised: isHovering)
         .scaleEffect(isHovering && !reduceMotion ? 1.008 : 1)
         .onHover { hovering in
             withAnimation(QuickAccessAnimations.hoverOverlay) {

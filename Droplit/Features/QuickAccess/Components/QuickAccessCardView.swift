@@ -58,9 +58,7 @@ struct QuickAccessCardView: View {
         .clipShape(cardShape)
         .overlay(cardShape.strokeBorder(.white.opacity(0.16), lineWidth: 1))
         .compositingGroup()
-        .shadow(color: .black.opacity(isHovering ? 0.11 : 0.075), radius: isHovering ? 30 : 26, x: 0, y: isHovering ? 13 : 10)
-        .shadow(color: .black.opacity(isHovering ? 0.08 : 0.055), radius: isHovering ? 12 : 9, x: 0, y: isHovering ? 5 : 4)
-        .shadow(color: .black.opacity(isHovering ? 0.05 : 0.035), radius: isHovering ? 2.5 : 2, x: 0, y: 1)
+        .quickAccessCardShadow(isRaised: isHovering)
         .scaleEffect(isHovering && !reduceMotion ? 1.008 : 1)
         .quickAccessCursor(isDraggingToDismiss ? .closedHand : .pointingHand)
         .onHover { hovering in
@@ -242,15 +240,37 @@ struct QuickAccessCardView: View {
     }
 
     private var readabilityOverlay: some View {
-        LinearGradient(
-            colors: [
-                .black.opacity(0.10),
-                .clear,
-                .black.opacity(0.64)
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
+        ZStack {
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .black.opacity(0.30), location: 0),
+                    .init(color: .black.opacity(0.10), location: 0.22),
+                    .init(color: .clear, location: 0.50)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: Self.accentColor.opacity(0.18), location: 0),
+                    .init(color: Self.accentColor.opacity(0.07), location: 0.26),
+                    .init(color: .clear, location: 0.54)
+                ]),
+                startPoint: .topLeading,
+                endPoint: .center
+            )
+
+            LinearGradient(
+                gradient: Gradient(stops: [
+                    .init(color: .clear, location: 0.36),
+                    .init(color: .black.opacity(0.66), location: 1)
+                ]),
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .allowsHitTesting(false)
     }
 
     private var topControls: some View {
@@ -449,5 +469,31 @@ private struct ProgressBar: View {
     private func filledWidth(in totalWidth: CGFloat) -> CGFloat {
         let value = progress.map { min(max($0, 0.05), 1) } ?? phase
         return totalWidth * value
+    }
+}
+
+struct QuickAccessCardShadowModifier: ViewModifier {
+    let isRaised: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .shadow(
+                color: .black.opacity(isRaised ? 0.11 : 0.08),
+                radius: isRaised ? 34 : 29,
+                x: 0,
+                y: isRaised ? 15 : 12
+            )
+            .shadow(
+                color: .black.opacity(isRaised ? 0.055 : 0.04),
+                radius: isRaised ? 11 : 8,
+                x: 0,
+                y: isRaised ? 4 : 3
+            )
+    }
+}
+
+extension View {
+    func quickAccessCardShadow(isRaised: Bool) -> some View {
+        modifier(QuickAccessCardShadowModifier(isRaised: isRaised))
     }
 }
