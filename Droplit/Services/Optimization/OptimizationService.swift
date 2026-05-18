@@ -576,6 +576,37 @@ struct HomebrewBootstrapResult {
     }
 }
 
+struct HomebrewBootstrapProgress {
+    enum Phase: Equatable {
+        case preparing
+        case installing
+        case verifying
+        case finished
+    }
+
+    let completedPackageCount: Int
+    let totalPackageCount: Int
+    let currentPackage: String?
+    let phase: Phase
+
+    var fractionCompleted: Double {
+        guard totalPackageCount > 0 else { return 1 }
+        let completed = Double(completedPackageCount)
+        let total = Double(totalPackageCount)
+
+        switch phase {
+        case .preparing:
+            return 0
+        case .installing:
+            return min(max((completed + 0.35) / total, 0.05), 0.95)
+        case .verifying, .finished:
+            return 1
+        }
+    }
+}
+
+typealias HomebrewBootstrapProgressHandler = (HomebrewBootstrapProgress) -> Void
+
 enum HomebrewBootstrapError: LocalizedError {
     case homebrewMissing
     case installFailed(String)
@@ -603,11 +634,13 @@ enum HomebrewBootstrapService {
         OptimizationTool.catalog.filter { !$0.isAvailable }
     }
 
-    static func installMissingTools() async throws -> HomebrewBootstrapResult {
+    static func installMissingTools(
+        progress: HomebrewBootstrapProgressHandler? = nil
+    ) async throws -> HomebrewBootstrapResult {
         try await withCheckedThrowingContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
                 do {
-                    let result = try installMissingToolsSynchronously()
+                    let result = try installMissingToolsSynchronously(progress: progress)
                     continuation.resume(returning: result)
                 } catch {
                     continuation.resume(throwing: error)
@@ -616,9 +649,19 @@ enum HomebrewBootstrapService {
         }
     }
 
-    private static func installMissingToolsSynchronously() throws -> HomebrewBootstrapResult {
+    private static func installMissingToolsSynchronously(
+        progress: HomebrewBootstrapProgressHandler?
+    ) throws -> HomebrewBootstrapResult {
         let missingTools = missingTools()
         guard !missingTools.isEmpty else {
+            progress?(
+                HomebrewBootstrapProgress(
+                    completedPackageCount: 0,
+                    totalPackageCount: 0,
+                    currentPackage: nil,
+                    phase: .finished
+                )
+            )
             return HomebrewBootstrapResult(requestedPackages: [], stillMissingTools: [])
         }
 
@@ -627,11 +670,49 @@ enum HomebrewBootstrapService {
         }
 
         let packages = Array(Set(missingTools.map(\.brewPackage))).sorted()
-        try runHomebrew(homebrewURL, arguments: ["install"] + packages)
+        progress?(
+            HomebrewBootstrapProgress(
+                completedPackageCount: 0,
+                totalPackageCount: packages.count,
+                currentPackage: nil,
+                phase: .preparing
+            )
+        )
+
+        for (index, package) in packages.enumerated() {
+            progress?(
+                HomebrewBootstrapProgress(
+                    completedPackageCount: index,
+                    totalPackageCount: packages.count,
+                    currentPackage: package,
+                    phase: .installing
+                )
+            )
+            try runHomebrew(homebrewURL, arguments: ["install", package])
+        }
+
+        progress?(
+            HomebrewBootstrapProgress(
+                completedPackageCount: packages.count,
+                totalPackageCount: packages.count,
+                currentPackage: nil,
+                phase: .verifying
+            )
+        )
+
+        let stillMissingTools = self.missingTools()
+        progress?(
+            HomebrewBootstrapProgress(
+                completedPackageCount: packages.count,
+                totalPackageCount: packages.count,
+                currentPackage: nil,
+                phase: .finished
+            )
+        )
 
         return HomebrewBootstrapResult(
             requestedPackages: packages,
-            stillMissingTools: self.missingTools()
+            stillMissingTools: stillMissingTools
         )
     }
 

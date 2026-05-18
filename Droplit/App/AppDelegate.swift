@@ -6,7 +6,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         OptimizationTemporaryFileStore.cleanupExpiredOutputsInBackground()
-        QuickAccessManager.shared.start()
     }
 
     func applicationWillTerminate(_ notification: Notification) {

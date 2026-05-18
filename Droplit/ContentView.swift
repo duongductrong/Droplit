@@ -39,6 +39,9 @@ struct ContentView: View {
                 quickAccess.ingestDroppedURLs(urls)
             }
         }
+        .onAppear {
+            quickAccess.start()
+        }
     }
 
     private var selectedSectionBinding: Binding<DroplitSettingsSection> {

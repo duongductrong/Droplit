@@ -13,12 +13,12 @@ struct DroplitApp: App {
 
     var body: some Scene {
         WindowGroup("Droplit", id: "main") {
-            ContentView()
+            DroplitLaunchView()
                 .toolbar(removing: .title)
         }
         .defaultSize(width: 920, height: 680)
         .defaultLaunchBehavior(.presented)
-        .windowResizability(.contentSize)
+        .restorationBehavior(.disabled)
         .windowToolbarStyle(.unifiedCompact)
     }
 }

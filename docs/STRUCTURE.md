@@ -32,8 +32,15 @@ flowchart TD
 Droplit/
   App/
     AppDelegate.swift
+    DroplitLaunchView.swift
 
   Features/
+    Onboarding/
+      OnboardingPermissions.swift
+      OnboardingStep.swift
+      OnboardingToolSetupView.swift
+      OnboardingView.swift
+
     OutputSettings/
       OutputSettingsView.swift
 
@@ -94,7 +101,8 @@ docs/
 
 | Path | Owns |
 | --- | --- |
-| `App/` | App lifecycle and launch-time service bootstrap |
+| `App/` | App lifecycle, first-run launch gate, and launch-time service bootstrap |
+| `Features/Onboarding/` | First-run welcome, required optimizer tool setup, optional permission setup, and completion transition |
 | `Features/Settings/` | Main System Settings-style configuration shell, sidebar, detail pages, shared grouped rows |
 | `Features/OutputSettings/` | Output destination toggle, folder picker, temp retention controls |
 | `Features/QuickAccess/` | Floating stack, placeholder card, drag/drop, card visuals, trigger detection |
@@ -102,39 +110,56 @@ docs/
 | `Support/` | Small platform helpers |
 | `docs/DESIGN_TOKENS.md` | Shared visual tokens and state treatment |
 
+## Onboarding Flow
+
+1. `DroplitApp` opens the main `WindowGroup`.
+2. `DroplitLaunchView` reads `onboarding.isComplete` from `@AppStorage`.
+3. The main window disables restoration so onboarding starts from the default 920 x 680 launch size instead of a stale saved frame.
+4. If onboarding is incomplete, `OnboardingView` fills the window with a transparent native material surface and hides the toolbar/header.
+5. Onboarding content is centered in a scrollable region with finite minimum window sizing, so smaller windows scroll content instead of forcing height.
+6. The visible step sequence is Welcome, Tools, optional Permissions, then Ready.
+7. The Permissions step is omitted when `OnboardingPermissions.requirements` is empty.
+8. Tools setup uses `HomebrewBootstrapService.missingTools()` and blocks Continue until all optimizer tools are ready.
+9. If Homebrew is available, the tool step can install missing packages through the existing Homebrew bootstrap service and shows package-level progress while setup runs.
+10. A bottom-center dot indicator shows the current step while Back and Continue remain native footer controls.
+11. The content is centered in the window; there is no onboarding sidebar or step rail.
+12. Completing onboarding sets `onboarding.isComplete` and swaps the window into `ContentView`.
+13. `ContentView` starts `QuickAccessManager` on appear, so drag monitors and the floating panel begin only after onboarding.
+
 ## Quick Access Flow
 
-1. `AppDelegate` starts `QuickAccessManager`.
-2. `QuickAccessManager` listens to local/global drag events.
-3. `QuickAccessManager` checks the active drag pasteboard for supported optimizer payloads, then evaluates the configured trigger interaction.
+1. `AppDelegate` performs launch activation and expired temporary output cleanup.
+2. `ContentView` starts `QuickAccessManager` after onboarding is complete.
+3. `QuickAccessManager` listens to local/global drag events.
+4. `QuickAccessManager` checks the active drag pasteboard for supported optimizer payloads, then evaluates the configured trigger interaction.
    Default is shake via `QuickAccessShakeDetector`; hold starts a timer using the configured delay.
-4. `QuickAccessPanelController` shows a non-activating floating `NSPanel`.
-5. The panel position combines top/bottom edge with left/center/right alignment.
+5. `QuickAccessPanelController` shows a non-activating floating `NSPanel`.
+6. The panel position combines top/bottom edge with left/center/right alignment.
    Bottom placement anchors the stack to the lower edge and grows upward; top placement enters from the upper edge, anchors high, and grows downward.
    Top placement compensates for menu/notch safe area so the visual inset to the nearest Quick Access card edge matches bottom placement.
-6. The placeholder stays pinned while the drag session is active.
-7. If the user releases without dropping, the placeholder hides after a short grace period.
-8. `QuickAccessDropReceiverView` caches pasteboard eligibility by `changeCount` during drag updates and avoids reading large inline data until drop.
-9. On drop, `QuickAccessDropReceiverView` reads file URLs or image/PDF pasteboard data.
-10. `QuickAccessManager` immediately inserts queued cards with placeholder thumbnails so the panel responds before thumbnail work finishes.
-11. `QuickAccessThumbnailGenerator` builds real image/PDF thumbnails off the main path, while video thumbnails use async AVFoundation loading.
-12. The concurrency scheduler starts up to the configured number of optimization jobs.
-13. Extra jobs remain queued until an active job completes, fails, or is removed.
-14. Removing a processing card cancels the Swift task and terminates the active optimizer process.
-15. `OptimizationService` resolves the current output destination.
-16. If Save location is on, output writes to the selected folder.
-17. If Save location is off, output writes to Droplit app temp storage.
-18. Temp outputs expire after the configured retention period, defaulting to 1 day and capped at 90 days.
-19. Supported image and video cards show XS conversion buttons under the card.
-20. Image conversion targets are PNG, JPEG, WebP, and HEIC.
-21. Video/GIF conversion targets are GIF, MOV, and MP4.
-22. Conversion actions always read `QuickAccessItem.sourceURL`, not the optimized output URL, so repeated switches do not chain from a compressed/downscaled derivative.
-23. Swipe a Quick Access result card left or right to dismiss that card.
-24. Drag a completed Quick Access card away from its dismiss direction to drop the optimized or converted output into external apps.
-25. External card drag uses an AppKit `NSDraggingSession` with the output file URL as an `NSURL` pasteboard writer for broad Finder, native app, and browser compatibility.
-26. Double-click a card to open the optimized or converted output, falling back to the source file when output is unavailable.
-27. Completed Quick Access cards stay visible for 15 seconds, then auto-hide.
-28. The floating Quick Access stack shows the newest cards plus an overflow summary when the queue is larger than the panel should display.
+7. The placeholder stays pinned while the drag session is active.
+8. If the user releases without dropping, the placeholder hides after a short grace period.
+9. `QuickAccessDropReceiverView` caches pasteboard eligibility by `changeCount` during drag updates and avoids reading large inline data until drop.
+10. On drop, `QuickAccessDropReceiverView` reads file URLs or image/PDF pasteboard data.
+11. `QuickAccessManager` immediately inserts queued cards with placeholder thumbnails so the panel responds before thumbnail work finishes.
+12. `QuickAccessThumbnailGenerator` builds real image/PDF thumbnails off the main path, while video thumbnails use async AVFoundation loading.
+13. The concurrency scheduler starts up to the configured number of optimization jobs.
+14. Extra jobs remain queued until an active job completes, fails, or is removed.
+15. Removing a processing card cancels the Swift task and terminates the active optimizer process.
+16. `OptimizationService` resolves the current output destination.
+17. If Save location is on, output writes to the selected folder.
+18. If Save location is off, output writes to Droplit app temp storage.
+19. Temp outputs expire after the configured retention period, defaulting to 1 day and capped at 90 days.
+20. Supported image and video cards show XS conversion buttons under the card.
+21. Image conversion targets are PNG, JPEG, WebP, and HEIC.
+22. Video/GIF conversion targets are GIF, MOV, and MP4.
+23. Conversion actions always read `QuickAccessItem.sourceURL`, not the optimized output URL, so repeated switches do not chain from a compressed/downscaled derivative.
+24. Swipe a Quick Access result card left or right to dismiss that card.
+25. Drag a completed Quick Access card away from its dismiss direction to drop the optimized or converted output into external apps.
+26. External card drag uses an AppKit `NSDraggingSession` with the output file URL as an `NSURL` pasteboard writer for broad Finder, native app, and browser compatibility.
+27. Double-click a card to open the optimized or converted output, falling back to the source file when output is unavailable.
+28. Completed Quick Access cards stay visible for 15 seconds, then auto-hide.
+29. The floating Quick Access stack shows the newest cards plus an overflow summary when the queue is larger than the panel should display.
 
 Output destination and retention are changed from main window Output configuration.
 Parallel job count is changed from main window Concurrency configuration.
@@ -163,7 +188,8 @@ Parallel job count is changed from main window Concurrency configuration.
 brew install <missing-packages>
 ```
 
-4. After install completes, the Tools panel refreshes availability state.
+4. During install, callers can receive package-level progress for onboarding/status UI.
+5. After install completes, the Tools panel refreshes availability state.
 
 ## Optimizer Mapping
 

@@ -7,7 +7,8 @@ compact controls, and rounded utility surfaces.
 
 The main configuration surface follows the macOS System Settings pattern:
 
-- fixed launch content size: 920 x 680
+- default launch content size: 920 x 680
+- window resizing: standard user-resizable behavior; content must not force window height
 - root layout: `NavigationSplitView` with `.balanced` style
 - sidebar width: 220 minimum, 250 ideal, 280 maximum
 - search field: system `searchable(... placement: .sidebar)` field, no custom chrome
@@ -17,6 +18,22 @@ The main configuration surface follows the macOS System Settings pattern:
 - settings groups: `GroupBox` sections with standard material fill, 16-point horizontal inset, and balanced vertical spacing
 - settings rows: fixed leading label column plus trailing value/action or menu picker column, plain button rows for navigation
 - deployment target: macOS 15.0; the split view relies on current SwiftUI desktop behavior
+
+## Onboarding Window
+
+The first-run onboarding surface uses the same main window with a native macOS
+material treatment:
+
+- root launch gate: `DroplitLaunchView` switches between onboarding and `ContentView`
+- persistence: `@AppStorage("onboarding.isComplete")`
+- visual style: `.ultraThinMaterial` content and window container background, hidden toolbar/header
+- layout: finite resizable window, centered scrollable content column, native footer buttons, bottom-center dot indicator
+- footer actions: 34 horizontal inset, asymmetric 14 top / 24 bottom inset for bottom visual balance
+- steps: Welcome, Tools, optional Permissions, Ready
+- permission step: hidden while `OnboardingPermissions.requirements` is empty
+- tools step: `GroupBox` sections and compact rows, blocks Continue until all optimizer tools are ready, and shows package-level install progress when Homebrew setup runs
+- restoration: disabled for the main window so first-run onboarding does not restore an oversized or closed saved state
+- completion: swaps into the main settings window and starts Quick Access from `ContentView.onAppear`
 
 ## Color
 
@@ -94,7 +111,8 @@ The main configuration surface follows the macOS System Settings pattern:
 
 ## Implementation Map
 
-- main settings shell lives in `ContentView` and uses `NavigationSplitView`
+- app launch shell lives in `DroplitLaunchView`; main settings shell lives in `ContentView` and uses `NavigationSplitView`
+- first-run onboarding lives in `Features/Onboarding` and uses only native transparent materials, SF Symbols, GroupBox, dot step indicators, and standard buttons
 - sidebar only lists top-level destinations; storage, conversion, and concurrency are surfaced from detail pages instead of duplicate source-list entries
 - sidebar search is attached at the split-view level with `.searchable(... placement: .sidebar)`
 - sidebar rows stay flat and Mail-like: one SF Symbol, one title line, one optional secondary line
