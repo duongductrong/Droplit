@@ -125,9 +125,14 @@ fi
 BUILD_DIR=$(xcodebuild -project "$PROJECT" -scheme "$SCHEME" -showBuildSettings | grep -m1 'BUILT_PRODUCTS_DIR' | awk '{print $3}')
 APP_PATH="$BUILD_DIR/$SCHEME.app"
 
-# Launch app directly so stdout/stderr (print statements) appear in this terminal
-"$APP_PATH/Contents/MacOS/$SCHEME" &
-APP_PID=$!
+# Launch the app bundle through LaunchServices so macOS treats it as a GUI app.
+/usr/bin/open -n "$APP_PATH"
+sleep 1
+APP_PID=$(pgrep -nx "$SCHEME" || true)
+if [ -z "$APP_PID" ]; then
+    error "Launch failed: $SCHEME process was not found."
+    exit 1
+fi
 success "Launched $SCHEME (PID: $APP_PID)"
 
 # 4. Filtered Stream

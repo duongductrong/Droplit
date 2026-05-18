@@ -33,7 +33,7 @@ material treatment:
 - permission step: hidden while `OnboardingPermissions.requirements` is empty
 - tools step: `GroupBox` sections and compact rows, blocks Continue until all optimizer tools are ready, and shows package-level install progress when Homebrew setup runs
 - restoration: disabled for the main window so first-run onboarding does not restore an oversized or closed saved state
-- completion: swaps into the main settings window and starts Quick Access from `ContentView.onAppear`
+- completion: swaps into the main settings window; `AppDelegate` owns launch-time Quick Access bootstrap, while `ContentView.onAppear` starts it after first-run completion
 
 ## Color
 

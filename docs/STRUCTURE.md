@@ -124,12 +124,12 @@ docs/
 10. A bottom-center dot indicator shows the current step while Back and Continue remain native footer controls.
 11. The content is centered in the window; there is no onboarding sidebar or step rail.
 12. Completing onboarding sets `onboarding.isComplete` and swaps the window into `ContentView`.
-13. `ContentView` starts `QuickAccessManager` on appear, so drag monitors and the floating panel begin only after onboarding.
+13. `ContentView` calls `QuickAccessManager.start()` on appear as an idempotent fallback after first-run onboarding completes.
 
 ## Quick Access Flow
 
-1. `AppDelegate` performs launch activation and expired temporary output cleanup.
-2. `ContentView` starts `QuickAccessManager` after onboarding is complete.
+1. `AppDelegate` performs launch activation, expired temporary output cleanup, and starts `QuickAccessManager` when onboarding is complete.
+2. `ContentView` also calls `QuickAccessManager.start()` after onboarding transitions into the settings window, so the listener starts in the same session after first-run setup.
 3. `QuickAccessManager` listens to local/global drag events.
 4. `QuickAccessManager` checks the active drag pasteboard for supported optimizer payloads, then evaluates the configured trigger interaction.
    Default is shake via `QuickAccessShakeDetector`; hold starts a timer using the configured delay.
