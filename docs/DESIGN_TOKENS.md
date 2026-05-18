@@ -29,9 +29,13 @@ material treatment:
 - visual style: `.ultraThinMaterial` content and window container background, hidden toolbar/header
 - layout: finite resizable window, centered scrollable content column, native footer buttons, bottom-center dot indicator
 - footer actions: 34 horizontal inset, asymmetric 14 top / 24 bottom inset for bottom visual balance
-- steps: Welcome, Tools, optional Permissions, Ready
+- steps: Welcome, Install dependencies, optional Permissions, Ready
 - permission step: hidden while `OnboardingPermissions.requirements` is empty
-- tools step: `GroupBox` sections and compact rows, blocks Continue until all optimizer tools are ready, and shows package-level install progress when Homebrew setup runs
+- dependency step: large thin-stroke circular progress control under the title/subtitle, blocks Continue until all optimizer tools are ready, installs missing Homebrew packages on click, and resolves to Done at 100%
+- dependency footer CTA: while required dependencies are missing, the footer primary button becomes Install, then returns to Continue after setup finishes successfully
+- Homebrew unavailable state: show Homebrew install link, Refresh action, and manual install fallback copy
+- dependency list: paragraph text with project hyperlinks for each optimizer name
+- ready step: centered Quick Access preview shows media chips and a pointer moving into a raised monochrome material drop card, then becoming a non-overlapping clipped vertical processing stack
 - restoration: disabled for the main window so first-run onboarding does not restore an oversized or closed saved state
 - completion: swaps into the main settings window; `AppDelegate` owns launch-time Quick Access bootstrap, while `ContentView.onAppear` starts it after first-run completion
 

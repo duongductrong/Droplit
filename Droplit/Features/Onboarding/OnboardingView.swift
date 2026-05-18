@@ -6,6 +6,8 @@ struct OnboardingView: View {
 
     @State private var selectedStepIndex = 0
     @State private var toolRefreshID = UUID()
+    @State private var toolInstallRequestID = UUID()
+    @State private var isInstallingTools = false
     @State private var permissionRefreshID = UUID()
 
     private var steps: [OnboardingStep] {
@@ -79,6 +81,8 @@ struct OnboardingView: View {
             case .tools:
                 OnboardingToolSetupView(
                     refreshID: toolRefreshID,
+                    installRequestID: toolInstallRequestID,
+                    isInstallingTools: $isInstallingTools,
                     onRefresh: refreshTools
                 )
                 .frame(maxWidth: 620)
@@ -118,22 +122,21 @@ struct OnboardingView: View {
     }
 
     private var completeContent: some View {
-        VStack(alignment: .center, spacing: 16) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 58))
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(.green)
+        VStack(alignment: .center, spacing: 12) {
+            OnboardingReadyQuickAccessPreview()
 
-            Text("Droplit is ready.")
-                .font(.title2.weight(.semibold))
+            VStack(alignment: .center, spacing: 8) {
+                Text("Drop into the Quick Access card.")
+                    .font(.title2.weight(.semibold))
 
-            Text("Open the app window and start using Quick Access or import files from the queue.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                Text("Images and videos move from the placeholder into processing as soon as you release.")
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
-        .frame(maxWidth: 500, alignment: .center)
+        .frame(maxWidth: 560, alignment: .center)
     }
 
     private var footer: some View {
@@ -142,16 +145,16 @@ struct OnboardingView: View {
                 Button("Back") {
                     selectedStepIndex = max(selectedStepIndex - 1, 0)
                 }
-                .disabled(selectedStepIndex == 0)
+                .disabled(selectedStepIndex == 0 || isInstallingTools)
 
                 Spacer()
 
                 Button(primaryButtonTitle) {
-                    advance()
+                    performPrimaryAction()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
-                .disabled(!canAdvance)
+                .disabled(isPrimaryButtonDisabled)
             }
 
             stepDots
@@ -176,21 +179,42 @@ struct OnboardingView: View {
     }
 
     private var primaryButtonTitle: String {
-        currentStep == .complete ? "Start Using Droplit" : "Continue"
-    }
-
-    private var canAdvance: Bool {
         switch currentStep {
-        case .welcome, .complete:
-            true
-        case .tools:
-            HomebrewBootstrapService.missingTools().isEmpty
-        case .permissions:
-            OnboardingPermissions.allRequirementsGranted
+        case .complete:
+            return "Start Using Droplit"
+        case .tools where !toolMissingDependencies.isEmpty:
+            return isInstallingTools ? "Installing..." : "Install"
+        default:
+            return "Continue"
         }
     }
 
-    private func advance() {
+    private var isPrimaryButtonDisabled: Bool {
+        switch currentStep {
+        case .welcome, .complete:
+            return false
+        case .tools:
+            if toolMissingDependencies.isEmpty {
+                return false
+            }
+
+            return isInstallingTools || !HomebrewBootstrapService.isHomebrewAvailable
+        case .permissions:
+            return !OnboardingPermissions.allRequirementsGranted
+        }
+    }
+
+    private var toolMissingDependencies: [OptimizationTool] {
+        HomebrewBootstrapService.missingTools()
+    }
+
+    private func performPrimaryAction() {
+        if currentStep == .tools, !toolMissingDependencies.isEmpty {
+            guard HomebrewBootstrapService.isHomebrewAvailable, !isInstallingTools else { return }
+            toolInstallRequestID = UUID()
+            return
+        }
+
         if currentStep == .complete {
             onFinish()
             return

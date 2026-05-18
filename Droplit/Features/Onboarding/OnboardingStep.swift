@@ -11,7 +11,7 @@ enum OnboardingStep: String, Identifiable {
     var title: String {
         switch self {
         case .welcome: "Welcome"
-        case .tools: "Set Up Tools"
+        case .tools: "Install dependencies"
         case .permissions: "Permissions"
         case .complete: "Ready"
         }
@@ -20,9 +20,9 @@ enum OnboardingStep: String, Identifiable {
     var subtitle: String {
         switch self {
         case .welcome: "Fast local media optimization, built for macOS."
-        case .tools: "Install required optimizer tools before continuing."
+        case .tools: "Install the open-source dependencies Droplit uses locally."
         case .permissions: "Grant the permissions Droplit needs on this Mac."
-        case .complete: "Setup is complete."
+        case .complete: "Drop media into Quick Access to begin."
         }
     }
 

@@ -17,19 +17,20 @@ struct OptimizationTool: Identifiable {
     let brewPackage: String
     let role: String
     let systemImage: String
+    let projectURL: URL
 
     var isAvailable: Bool {
         OptimizationToolResolver.executable(named: command) != nil
     }
 
     static let catalog: [OptimizationTool] = [
-        OptimizationTool(id: "pngquant", name: "pngquant", command: "pngquant", brewPackage: "pngquant", role: "PNG", systemImage: "photo"),
-        OptimizationTool(id: "jpegoptim", name: "jpegoptim", command: "jpegoptim", brewPackage: "jpegoptim", role: "JPEG", systemImage: "camera"),
-        OptimizationTool(id: "gifsicle", name: "gifsicle", command: "gifsicle", brewPackage: "gifsicle", role: "GIF", systemImage: "sparkles"),
-        OptimizationTool(id: "ffmpeg", name: "ffmpeg", command: "ffmpeg", brewPackage: "ffmpeg", role: "Video", systemImage: "video"),
-        OptimizationTool(id: "vips", name: "libvips", command: "vips", brewPackage: "vips", role: "Resize", systemImage: "arrow.down.right.and.arrow.up.left"),
-        OptimizationTool(id: "gifski", name: "gifski", command: "gifski", brewPackage: "gifski", role: "Video to GIF", systemImage: "film.stack"),
-        OptimizationTool(id: "gs", name: "ghostscript", command: "gs", brewPackage: "ghostscript", role: "PDF", systemImage: "doc.richtext")
+        OptimizationTool(id: "pngquant", name: "pngquant", command: "pngquant", brewPackage: "pngquant", role: "PNG", systemImage: "photo", projectURL: URL(string: "https://github.com/kornelski/pngquant")!),
+        OptimizationTool(id: "jpegoptim", name: "jpegoptim", command: "jpegoptim", brewPackage: "jpegoptim", role: "JPEG", systemImage: "camera", projectURL: URL(string: "https://github.com/tjko/jpegoptim")!),
+        OptimizationTool(id: "gifsicle", name: "gifsicle", command: "gifsicle", brewPackage: "gifsicle", role: "GIF", systemImage: "sparkles", projectURL: URL(string: "https://github.com/kohler/gifsicle")!),
+        OptimizationTool(id: "ffmpeg", name: "ffmpeg", command: "ffmpeg", brewPackage: "ffmpeg", role: "Video", systemImage: "video", projectURL: URL(string: "https://ffmpeg.org")!),
+        OptimizationTool(id: "vips", name: "libvips", command: "vips", brewPackage: "vips", role: "Resize", systemImage: "arrow.down.right.and.arrow.up.left", projectURL: URL(string: "https://github.com/libvips/libvips")!),
+        OptimizationTool(id: "gifski", name: "gifski", command: "gifski", brewPackage: "gifski", role: "Video to GIF", systemImage: "film.stack", projectURL: URL(string: "https://github.com/ImageOptim/gifski")!),
+        OptimizationTool(id: "gs", name: "ghostscript", command: "gs", brewPackage: "ghostscript", role: "PDF", systemImage: "doc.richtext", projectURL: URL(string: "https://ghostscript.com")!)
     ]
 }
 

@@ -9,3 +9,13 @@ script = ""
 name = "Run"
 icon = "run"
 command = "./scripts/build_and_run.sh"
+
+[[actions]]
+name = "Launch"
+icon = "tool"
+command = "./scripts/launch.sh"
+
+[[actions]]
+name = "Uni Dependencies"
+icon = "test"
+command = "brew uninstall --ignore-dependencies pngquant jpegoptim gifsicle ffmpeg vips gifski ghostscript"

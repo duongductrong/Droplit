@@ -1,109 +1,118 @@
+import AppKit
 import Foundation
 import SwiftUI
 
 struct OnboardingToolSetupView: View {
     let refreshID: UUID
+    let installRequestID: UUID
+    @Binding var isInstallingTools: Bool
     let onRefresh: () -> Void
 
-    @State private var isInstallingTools = false
+    @State private var isProgressHovering = false
     @State private var message: String?
     @State private var installProgress: HomebrewBootstrapProgress?
 
+    private let progressCircleSize: CGFloat = 176
+    private let progressCircleLineWidth: CGFloat = 9
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            GroupBox {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .center, spacing: 14) {
-                        Image(systemName: statusSystemImage)
-                            .font(.title2)
-                            .foregroundStyle(statusColor)
-                            .frame(width: 30)
+        VStack(alignment: .center, spacing: 18) {
+            progressInstallControl
 
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(statusTitle)
-                                .font(.headline)
+            dependencyStatusView
 
-                            Text(message ?? statusSubtitle)
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-
-                        Spacer(minLength: 16)
-
-                        statusAction
-                    }
-
-                    if isInstallingTools, let installProgress {
-                        installProgressView(installProgress)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-            }
-
-            GroupBox {
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(OptimizationTool.catalog.enumerated()), id: \.element.id) { index, tool in
-                        toolRow(tool)
-
-                        if index < OptimizationTool.catalog.count - 1 {
-                            Divider()
-                        }
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 2)
-            } label: {
-                Text("Required Tools")
-                    .font(.headline)
-                    .padding(.bottom, 6)
-            }
-            .id(refreshID)
+            dependencyList
         }
-    }
-
-    private func installProgressView(_ progress: HomebrewBootstrapProgress) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ProgressView(value: progress.fractionCompleted)
-
-            HStack(spacing: 12) {
-                Text(progressDetailText(progress))
-                    .lineLimit(1)
-
-                Spacer(minLength: 12)
-
-                Text(progressCountText(progress))
-                    .monospacedDigit()
+        .frame(maxWidth: .infinity)
+        .onChange(of: installRequestID) { _, _ in
+            Task {
+                await installMissingTools()
             }
-            .font(.caption)
-            .foregroundStyle(.secondary)
         }
-        .padding(.leading, 44)
-        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     @ViewBuilder
-    private var statusAction: some View {
-        if isInstallingTools {
-            ProgressView()
-                .controlSize(.small)
-        } else if missingTools.isEmpty {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.title3)
-                .foregroundStyle(.green)
-                .help("All tools ready")
-        } else if HomebrewBootstrapService.isHomebrewAvailable {
-            Button("Install Missing") {
+    private var progressInstallControl: some View {
+        if canInstallFromProgress {
+            Button {
                 Task {
                     await installMissingTools()
                 }
+            } label: {
+                progressCircle
             }
-            .controlSize(.small)
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.plain)
+            .accessibilityLabel("Install missing dependencies")
+            .accessibilityValue("\(installedToolCount) of \(totalToolCount) installed")
         } else {
-            HStack(spacing: 8) {
-                Link("Get Homebrew", destination: URL(string: "https://brew.sh")!)
+            progressCircle
+                .accessibilityLabel("Dependency install progress")
+                .accessibilityValue(progressAccessibilityValue)
+        }
+    }
+
+    private var progressCircle: some View {
+        ZStack {
+            Circle()
+                .stroke(
+                    Color.primary.opacity(0.12),
+                    style: StrokeStyle(lineWidth: progressCircleLineWidth, lineCap: .round)
+                )
+
+            Circle()
+                .trim(from: 0, to: CGFloat(progressFraction))
+                .stroke(
+                    progressTint,
+                    style: StrokeStyle(lineWidth: progressCircleLineWidth, lineCap: .round)
+                )
+                .rotationEffect(.degrees(-90))
+                .shadow(color: progressTint.opacity(isInstallingTools ? 0.22 : 0.12), radius: 6, y: 2)
+                .animation(.easeInOut(duration: 0.24), value: progressFraction)
+
+            VStack(spacing: 5) {
+                Text(progressPrimaryText)
+                    .font(.system(size: progressPrimaryFontSize, weight: .semibold, design: .rounded))
+                    .foregroundStyle(progressPrimaryColor)
+                    .monospacedDigit()
+
+                Text(progressSecondaryText)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.72)
+                    .frame(width: 118)
+            }
+        }
+        .frame(width: progressCircleSize, height: progressCircleSize)
+        .contentShape(Circle())
+        .onHover { hovering in
+            isProgressHovering = hovering
+        }
+        .help(progressHelpText)
+        .onboardingPointingHandCursor(canInstallFromProgress)
+        .animation(.easeInOut(duration: 0.16), value: isProgressHovering)
+    }
+
+    private var dependencyStatusView: some View {
+        VStack(spacing: 8) {
+            Text(message ?? statusSubtitle)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if shouldShowHomebrewActions {
+                homebrewFallbackActions
+            }
+        }
+        .frame(maxWidth: 500)
+    }
+
+    private var homebrewFallbackActions: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 12) {
+                Link("Install Homebrew", destination: URL(string: "https://brew.sh")!)
                     .controlSize(.small)
 
                 Button("Refresh") {
@@ -111,76 +120,169 @@ struct OnboardingToolSetupView: View {
                 }
                 .controlSize(.small)
             }
+
+            Text("You can also install the linked dependencies yourself, then refresh.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
-    private func toolRow(_ tool: OptimizationTool) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            Image(systemName: tool.systemImage)
-                .foregroundStyle(.secondary)
-                .frame(width: 22)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(tool.name)
-                    .font(.body)
-
-                Text(tool.role)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            Spacer(minLength: 16)
-
-            Text(tool.isAvailable ? "Ready" : "Missing")
-                .font(.callout)
-                .foregroundStyle(tool.isAvailable ? .secondary : .tertiary)
-        }
-        .padding(.vertical, 10)
+    private var dependencyList: some View {
+        Text(dependencyParagraph)
+            .font(.callout)
+            .multilineTextAlignment(.center)
+            .lineSpacing(3)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: 520)
+            .padding(.top, 4)
+            .id(refreshID)
     }
 
     private var missingTools: [OptimizationTool] {
         HomebrewBootstrapService.missingTools()
     }
 
-    private var statusSystemImage: String {
-        missingTools.isEmpty ? "checkmark.seal.fill" : "wrench.and.screwdriver.fill"
+    private var totalToolCount: Int {
+        OptimizationTool.catalog.count
     }
 
-    private var statusColor: Color {
-        missingTools.isEmpty ? .green : .secondary
+    private var installedToolCount: Int {
+        max(totalToolCount - missingTools.count, 0)
     }
 
-    private var statusTitle: String {
-        if isInstallingTools {
-            return "Installing tools"
-        } else if missingTools.isEmpty {
-            return "All optimizer tools ready"
+    private var progressFraction: Double {
+        let value: Double
+        if isInstallingTools, let installProgress {
+            value = installProgress.fractionCompleted
+        } else if totalToolCount == 0 {
+            value = 1
         } else {
-            return "\(missingTools.count) tools need setup"
+            value = Double(installedToolCount) / Double(totalToolCount)
         }
+
+        return min(max(value, 0), 1)
+    }
+
+    private var progressTint: Color {
+        if isInstallingTools || missingTools.isEmpty {
+            return .accentColor
+        } else {
+            return .white
+        }
+    }
+
+    private var progressPrimaryText: String {
+        if missingTools.isEmpty, !isInstallingTools {
+            return "Done"
+        } else if isInstallingTools {
+            return "\(Int((progressFraction * 100).rounded()))%"
+        } else {
+            return "\(installedToolCount)/\(totalToolCount)"
+        }
+    }
+
+    private var progressPrimaryFontSize: CGFloat {
+        missingTools.isEmpty && !isInstallingTools ? 30 : 34
+    }
+
+    private var progressPrimaryColor: Color {
+        .primary
+    }
+
+    private var progressSecondaryText: String {
+        if isInstallingTools, let installProgress {
+            return progressDetailText(installProgress)
+        } else if missingTools.isEmpty {
+            return "100%"
+        } else if isProgressHovering, HomebrewBootstrapService.isHomebrewAvailable {
+            return "Click to install"
+        } else if !HomebrewBootstrapService.isHomebrewAvailable {
+            return "Homebrew required"
+        } else {
+            return "installed"
+        }
+    }
+
+    private var progressAccessibilityValue: String {
+        if missingTools.isEmpty {
+            return "Done, 100 percent"
+        } else if isInstallingTools {
+            return "\(Int((progressFraction * 100).rounded())) percent"
+        } else {
+            return "\(installedToolCount) of \(totalToolCount) installed"
+        }
+    }
+
+    private var progressHelpText: String {
+        if isInstallingTools {
+            return "Installing dependencies"
+        } else if missingTools.isEmpty {
+            return "All dependencies installed"
+        } else if HomebrewBootstrapService.isHomebrewAvailable {
+            return "Click to install missing dependencies"
+        } else {
+            return "Install Homebrew first to install missing dependencies"
+        }
+    }
+
+    private var canInstallFromProgress: Bool {
+        !isInstallingTools && !missingTools.isEmpty && HomebrewBootstrapService.isHomebrewAvailable
+    }
+
+    private var shouldShowHomebrewActions: Bool {
+        !isInstallingTools && !missingTools.isEmpty && !HomebrewBootstrapService.isHomebrewAvailable
     }
 
     private var statusSubtitle: String {
         if missingTools.isEmpty {
-            return "Droplit can optimize supported media formats on this Mac."
+            return "All required dependencies are installed."
         } else if HomebrewBootstrapService.isHomebrewAvailable {
-            return "Install the missing Homebrew packages before continuing."
+            return "Droplit will install only the missing Homebrew packages."
         } else {
-            return "Homebrew is required to install the missing optimizer packages."
+            return "Homebrew is not installed, so Droplit cannot install dependencies automatically."
         }
+    }
+
+    private var dependencyParagraph: AttributedString {
+        var paragraph = dependencyText("Droplit uses ")
+
+        for (index, tool) in OptimizationTool.catalog.enumerated() {
+            var link = AttributedString(tool.name)
+            link.link = tool.projectURL
+            link.foregroundColor = .accentColor
+
+            paragraph += link
+
+            if index < OptimizationTool.catalog.count - 2 {
+                paragraph += dependencyText(", ")
+            } else if index == OptimizationTool.catalog.count - 2 {
+                paragraph += dependencyText(", and ")
+            }
+        }
+
+        paragraph += dependencyText(" to optimize media locally.")
+        return paragraph
+    }
+
+    private func dependencyText(_ text: String) -> AttributedString {
+        var string = AttributedString(text)
+        string.foregroundColor = .secondary
+        return string
     }
 
     @MainActor
     private func installMissingTools() async {
         let missingBeforeInstall = missingTools
         guard !missingBeforeInstall.isEmpty else {
-            message = "All optimizer tools ready"
+            message = "All required dependencies are installed."
             onRefresh()
             return
         }
 
         isInstallingTools = true
-        message = "Installing \(missingBeforeInstall.count) missing tools"
+        message = "Installing \(missingBeforeInstall.count) missing dependencies"
         defer {
             isInstallingTools = false
             installProgress = nil
@@ -201,7 +303,7 @@ struct OnboardingToolSetupView: View {
             }
             if result.installedEverything {
                 message = result.requestedPackages.isEmpty
-                    ? "All optimizer tools ready"
+                    ? "All required dependencies are installed."
                     : "Installed \(result.requestedPackages.joined(separator: ", "))"
             } else {
                 message = "Still missing \(toolNames(result.stillMissingTools))"
@@ -228,20 +330,55 @@ struct OnboardingToolSetupView: View {
         }
     }
 
-    private func progressCountText(_ progress: HomebrewBootstrapProgress) -> String {
-        guard progress.totalPackageCount > 0 else { return "Complete" }
-
-        let visibleCount = progress.phase == .installing
-            ? min(progress.completedPackageCount + 1, progress.totalPackageCount)
-            : progress.completedPackageCount
-        return "\(visibleCount) of \(progress.totalPackageCount)"
-    }
-
     private func shortToolMessage(_ message: String) -> String {
         let firstLine = message
             .split(whereSeparator: \.isNewline)
             .first
             .map(String.init) ?? message
         return String(firstLine.prefix(140))
+    }
+}
+
+private struct OnboardingPointingHandCursorModifier: ViewModifier {
+    let isEnabled: Bool
+    @State private var isActive = false
+
+    func body(content: Content) -> some View {
+        content
+            .onHover { hovering in
+                if hovering, isEnabled {
+                    push()
+                } else {
+                    pop()
+                }
+            }
+            .onChange(of: isEnabled) { _, newValue in
+                if newValue {
+                    return
+                }
+
+                pop()
+            }
+            .onDisappear {
+                pop()
+            }
+    }
+
+    private func push() {
+        guard !isActive else { return }
+        NSCursor.pointingHand.push()
+        isActive = true
+    }
+
+    private func pop() {
+        guard isActive else { return }
+        NSCursor.pop()
+        isActive = false
+    }
+}
+
+private extension View {
+    func onboardingPointingHandCursor(_ isEnabled: Bool) -> some View {
+        modifier(OnboardingPointingHandCursorModifier(isEnabled: isEnabled))
     }
 }

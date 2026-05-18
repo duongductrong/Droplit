@@ -117,14 +117,20 @@ docs/
 3. The main window disables restoration so onboarding starts from the default 920 x 680 launch size instead of a stale saved frame.
 4. If onboarding is incomplete, `OnboardingView` fills the window with a transparent native material surface and hides the toolbar/header.
 5. Onboarding content is centered in a scrollable region with finite minimum window sizing, so smaller windows scroll content instead of forcing height.
-6. The visible step sequence is Welcome, Tools, optional Permissions, then Ready.
+6. The visible step sequence is Welcome, Install dependencies, optional Permissions, then Ready.
 7. The Permissions step is omitted when `OnboardingPermissions.requirements` is empty.
-8. Tools setup uses `HomebrewBootstrapService.missingTools()` and blocks Continue until all optimizer tools are ready.
-9. If Homebrew is available, the tool step can install missing packages through the existing Homebrew bootstrap service and shows package-level progress while setup runs.
-10. A bottom-center dot indicator shows the current step while Back and Continue remain native footer controls.
-11. The content is centered in the window; there is no onboarding sidebar or step rail.
-12. Completing onboarding sets `onboarding.isComplete` and swaps the window into `ContentView`.
-13. `ContentView` calls `QuickAccessManager.start()` on appear as an idempotent fallback after first-run onboarding completes.
+8. Install dependencies uses `HomebrewBootstrapService.missingTools()` and blocks Continue until all optimizer tools are ready.
+9. If Homebrew is available, the dependency step installs missing packages through a large circular progress control backed by the existing Homebrew bootstrap service.
+10. The dependency progress center shows installed count before setup, package progress while installing, and Done at 100%.
+11. While dependencies are missing, the footer primary button changes from Continue to Install and triggers the same setup action as the circular progress control.
+12. After all dependencies are installed, the footer primary button returns to Continue.
+13. The dependency list renders as a paragraph with each open-source optimizer name linked to its project.
+14. If Homebrew is unavailable, the dependency step links to Homebrew, lets the user refresh after setup, and still supports manually installed tools.
+15. A bottom-center dot indicator shows the current step while Back and Continue remain native footer controls.
+16. The content is centered in the window; there is no onboarding sidebar or step rail.
+17. The Ready step previews Quick Access by animating image and video chips with a pointer cue into a raised drop placeholder, then into a non-overlapping clipped vertical processing stack.
+18. Completing onboarding sets `onboarding.isComplete` and swaps the window into `ContentView`.
+19. `ContentView` calls `QuickAccessManager.start()` on appear as an idempotent fallback after first-run onboarding completes.
 
 ## Quick Access Flow
 
