@@ -7,13 +7,13 @@ private enum DroplitSettingsMetrics {
     static let pageTopPadding: CGFloat = 48
     static let pageBottomPadding: CGFloat = 22
     static let pageHeaderLift: CGFloat = 10
-    static let labelColumnWidth: CGFloat = 330
-    static let rowSpacing: CGFloat = 24
+    static let labelColumnWidth: CGFloat = 260
+    static let rowSpacing: CGFloat = 20
     static let rowVerticalPadding: CGFloat = 12
     static let groupContentPadding: CGFloat = 16
     static let groupContentTitlePadding: CGFloat = 8
-    static let trailingColumnMinWidth: CGFloat = 220
-    static let pickerWidth: CGFloat = 220
+    static let trailingColumnWidth: CGFloat = 180
+    static let pickerWidth: CGFloat = 180
 }
 
 struct DroplitSettingsPage<Content: View>: View {
@@ -139,7 +139,9 @@ struct DroplitSettingsValueRow: View {
         ) {
             Text(value)
                 .foregroundColor(.secondary)
+                .lineLimit(1)
                 .multilineTextAlignment(.trailing)
+                .truncationMode(.middle)
                 .droplitTextSelectionEnabled()
         }
     }
@@ -201,7 +203,7 @@ struct DroplitSettingsNavigationRow: View {
                 DroplitSettingsRowLabel(title: title, subtitle: subtitle)
                     .frame(width: DroplitSettingsMetrics.labelColumnWidth, alignment: .leading)
 
-                Spacer(minLength: 24)
+                Spacer(minLength: 16)
 
                 Image(systemName: "chevron.right")
                     .font(.caption.weight(.semibold))
@@ -262,10 +264,10 @@ struct DroplitSettingsAlignedRow<Trailing: View>: View {
             DroplitSettingsRowLabel(title: title, subtitle: subtitle)
                 .frame(width: DroplitSettingsMetrics.labelColumnWidth, alignment: .leading)
 
-            Spacer(minLength: 24)
+            Spacer(minLength: 16)
 
             trailing
-                .frame(minWidth: DroplitSettingsMetrics.trailingColumnMinWidth, alignment: .trailing)
+                .frame(width: DroplitSettingsMetrics.trailingColumnWidth, alignment: .trailing)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, DroplitSettingsMetrics.rowVerticalPadding)

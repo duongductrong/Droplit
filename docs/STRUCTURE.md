@@ -175,15 +175,16 @@ Parallel job count is changed from the Settings window Concurrency configuration
 
 1. `ContentView` owns the post-onboarding settings shell and starts `QuickAccessManager`.
 2. On macOS 13 and newer, `DroplitModernSettingsRoot` uses `NavigationSplitView`; on macOS 11-12, `DroplitLegacySettingsRoot` uses an `HStack` sidebar/detail fallback.
-3. `DroplitSettingsSidebarView` renders the native source-list sidebar, including standalone About plus grouped Settings and Tool sections, and filters sections with an AppKit `NSSearchField`.
-4. `DroplitSettingsDetailView` switches between detail pages based on `DroplitSettingsSection`.
-5. `DroplitSettingsPage` provides the shared heading plus scroll layout for every detail page.
-6. `DroplitSettingsGroup`, `DroplitSettingsControlRow`, `DroplitSettingsValueRow`, and `DroplitSettingsAlignedRow` provide the shared native settings row treatment.
-7. `InfoSettingsView` About is the default standalone landing page.
-8. `QuickAccessSettingsView` owns Quick Access trigger, placement, preview, and concurrency controls.
-9. `OutputSettingsView` owns save location, destination folder, temp retention, and conversion output behavior.
-10. `ToolsSettingsView` owns optimizer status and Homebrew install action.
-11. `QueueSettingsView` owns the Media Optimization status, remove actions, and file import entry point.
+3. `ContentView` gives the settings window an 860 x 760 ideal content size with an 860 x 560 minimum size so common detail pages are visible on open without letting fixed settings rows clip horizontally.
+4. `DroplitSettingsSidebarView` renders the native source-list sidebar, including standalone About plus grouped Settings and Tool sections, and filters sections with an AppKit `NSSearchField`.
+5. `DroplitSettingsDetailView` switches between detail pages based on `DroplitSettingsSection`.
+6. `DroplitSettingsPage` provides the shared heading plus scroll layout for every detail page.
+7. `DroplitSettingsGroup`, `DroplitSettingsControlRow`, `DroplitSettingsValueRow`, and `DroplitSettingsAlignedRow` provide the shared native settings row treatment.
+8. `InfoSettingsView` About is the default standalone landing page.
+9. `QuickAccessSettingsView` owns Quick Access trigger, placement, preview, and concurrency controls.
+10. `OutputSettingsView` owns save location, destination folder, temp retention, and conversion output behavior.
+11. `ToolsSettingsView` owns optimizer status and Homebrew install action.
+12. `QueueSettingsView` owns the Media Optimization status, remove actions, and file import entry point.
 
 ## Homebrew Bootstrap Flow
 

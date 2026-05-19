@@ -5,8 +5,16 @@
 //  Created by duongductrong on 17/5/26.
 //
 
+import AppKit
 import SwiftUI
 import UniformTypeIdentifiers
+
+private enum DroplitSettingsWindowMetrics {
+    static let minWidth: CGFloat = 860
+    static let idealWidth: CGFloat = 860
+    static let minHeight: CGFloat = 560
+    static let idealHeight: CGFloat = 760
+}
 
 struct ContentView: View {
     @ObservedObject private var quickAccess = QuickAccessManager.shared
@@ -46,6 +54,15 @@ struct ContentView: View {
         .onAppear {
             quickAccess.start()
         }
+        .background(SettingsWindowConfigurator())
+        .frame(
+            minWidth: DroplitSettingsWindowMetrics.minWidth,
+            idealWidth: DroplitSettingsWindowMetrics.idealWidth,
+            maxWidth: .infinity,
+            minHeight: DroplitSettingsWindowMetrics.minHeight,
+            idealHeight: DroplitSettingsWindowMetrics.idealHeight,
+            maxHeight: .infinity
+        )
     }
 
     private var selectedSectionBinding: Binding<DroplitSettingsSection> {
@@ -55,6 +72,48 @@ struct ContentView: View {
         )
     }
 
+}
+
+private struct SettingsWindowConfigurator: NSViewRepresentable {
+    final class Coordinator {
+        var configuredWindow: NSWindow?
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        configureWindow(for: view, context: context)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        configureWindow(for: nsView, context: context)
+    }
+
+    private func configureWindow(for view: NSView, context: Context) {
+        DispatchQueue.main.async {
+            guard let window = view.window else { return }
+
+            window.minSize = NSSize(
+                width: DroplitSettingsWindowMetrics.minWidth,
+                height: DroplitSettingsWindowMetrics.minHeight
+            )
+
+            guard context.coordinator.configuredWindow !== window else { return }
+
+            context.coordinator.configuredWindow = window
+            window.setContentSize(
+                NSSize(
+                    width: DroplitSettingsWindowMetrics.idealWidth,
+                    height: DroplitSettingsWindowMetrics.idealHeight
+                )
+            )
+            window.center()
+        }
+    }
 }
 
 @available(macOS 13.0, *)

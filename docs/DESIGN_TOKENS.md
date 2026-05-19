@@ -7,7 +7,7 @@ compact controls, and rounded utility surfaces.
 
 The dedicated configuration surface follows the macOS System Settings pattern:
 
-- default launch content size: 920 x 680
+- default launch content size: 860 x 760
 - window resizing: standard user-resizable behavior; content must not force window height
 - root layout: `NavigationSplitView` with `.balanced` style on macOS 13+, manual sidebar/detail fallback on macOS 11-12
 - sidebar width: 220 minimum, 250 ideal, 280 maximum
@@ -24,7 +24,7 @@ The dedicated configuration surface follows the macOS System Settings pattern:
 The post-onboarding `ContentView` uses a System Settings-style sidebar/detail
 surface:
 
-- minimum content size: 720 x 520
+- minimum content size: 860 x 560
 - visual style: native sidebar/detail layout, hidden titlebar/header on supported macOS versions
 - layout: sidebar search and navigation on the leading edge, detail page content on the trailing edge
 - actions: Queue page imports files directly; Quick Access continues running from app launch and `ContentView.onAppear`
