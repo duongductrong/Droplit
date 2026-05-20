@@ -58,6 +58,7 @@ struct DroplitSettingsPage<Content: View>: View {
             .padding(.bottom, DroplitSettingsMetrics.pageBottomPadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }
+        .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .ignoresSafeArea(.container, edges: .top)
     }
 }

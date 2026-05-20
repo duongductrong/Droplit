@@ -10,7 +10,7 @@ The dedicated configuration surface follows the macOS System Settings pattern:
 - default launch content size: 860 x 760
 - window resizing: standard user-resizable behavior; content must not force window height
 - root layout: `NavigationSplitView` with `.balanced` style on macOS 13+, manual sidebar/detail fallback on macOS 11-12
-- sidebar width: 220 minimum, 250 ideal, 280 maximum
+- sidebar width: fixed 250, so detail page content cannot change sidebar padding or column placement
 - search field: AppKit-backed `NSSearchField` in the sidebar header for cross-version consistency
 - selected sidebar row: native source-list highlight and vibrancy
 - detail content width: 760 maximum, 32 horizontal inset, top-safe-area underlap, 22 bottom inset

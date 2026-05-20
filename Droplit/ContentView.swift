@@ -201,7 +201,7 @@ private struct DroplitLegacySettingsRoot: View {
                         searchText: $searchText,
                         toggleSidebar: toggleSidebar
                     )
-                    .frame(width: 250)
+                    .frame(width: DroplitSettingsSidebarMetrics.width)
 
                     Divider()
                 }

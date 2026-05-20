@@ -7,7 +7,7 @@ struct DroplitSettingsDetailView: View {
 
     var body: some View {
         pageContent
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     @ViewBuilder

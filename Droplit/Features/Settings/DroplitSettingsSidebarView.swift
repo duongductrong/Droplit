@@ -1,6 +1,10 @@
 import AppKit
 import SwiftUI
 
+enum DroplitSettingsSidebarMetrics {
+    static let width: CGFloat = 250
+}
+
 struct DroplitSettingsSidebarView: View {
     @Binding var selection: DroplitSettingsSection?
     @Binding var searchText: String
@@ -33,7 +37,11 @@ struct DroplitSettingsSidebarView: View {
             .overlay(emptySearchOverlay)
         }
         .ignoresSafeArea(.container, edges: .top)
-        .droplitSidebarColumnWidth(min: 220, ideal: 250, max: 280)
+        .droplitSidebarColumnWidth(
+            min: DroplitSettingsSidebarMetrics.width,
+            ideal: DroplitSettingsSidebarMetrics.width,
+            max: DroplitSettingsSidebarMetrics.width
+        )
     }
 
     private var sidebarHeader: some View {
