@@ -28,6 +28,7 @@ nonisolated enum QuickAccessBoxLayout {
     static let shadowMargin: CGFloat = 22
     static let cornerRadius: CGFloat = 17
     static let chromeButtonSize: CGFloat = 24
+    static let chromeHitSize: CGFloat = 46
     static let chromeCloseIconSize: CGFloat = 12
     static let chromeMoreIconSize: CGFloat = 12
     static let chromeInset: CGFloat = 14

@@ -113,24 +113,31 @@ struct QuickAccessBoxView: View {
     }
 
     private var chromeOverlay: some View {
-        VStack(spacing: 0) {
-            HStack {
-                chromeButton(systemImage: "xmark") {
-                    actions.removeAllItems()
-                }
-                .help(context.items.isEmpty ? "Close" : "Clear all items")
-
-                Spacer()
-                topRightControl
+        ZStack {
+            chromeButton(systemImage: "xmark") {
+                actions.removeAllItems()
             }
-            .padding(Layout.chromeInset)
+            .help(context.items.isEmpty ? "Close" : "Clear all items")
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.leading, Layout.chromeInset - chromeHitOutset)
+            .padding(.top, Layout.chromeInset - chromeHitOutset)
 
-            Spacer(minLength: 0)
+            topRightControl
+                .frame(width: Layout.chromeHitSize, height: Layout.chromeHitSize)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(.trailing, Layout.chromeInset - chromeHitOutset)
+                .padding(.top, Layout.chromeInset - chromeHitOutset)
+
             if showsPreviewStack {
                 countPill
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .padding(.bottom, Layout.countPillBottomInset)
             }
         }
+    }
+
+    private var chromeHitOutset: CGFloat {
+        max((Layout.chromeHitSize - Layout.chromeButtonSize) / 2, 0)
     }
 
     @ViewBuilder
@@ -152,10 +159,12 @@ struct QuickAccessBoxView: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Optimization progress")
         .accessibilityValue(topRightHelp)
+        .frame(width: Layout.chromeHitSize, height: Layout.chromeHitSize)
+        .quickAccessCursor(.arrow)
     }
 
     private var batchActionButton: some View {
-        chromeButton(systemImage: topRightIcon) {
+        chromeButton(systemImage: topRightIcon, isEnabled: !context.items.isEmpty) {
             guard !context.items.isEmpty else { return }
             isBatchActionsPopoverPresented.toggle()
         }
@@ -174,10 +183,12 @@ struct QuickAccessBoxView: View {
             countPillContent
         }
         .buttonStyle(.plain)
+        .contentShape(Capsule())
         .popover(isPresented: $isItemsPopoverPresented) {
             QuickAccessBoxItemsPopoverView(items: context.items, actions: actions)
         }
         .help(context.items.isEmpty ? "Drop items to inspect" : "Show dropped items")
+        .quickAccessCursor(.pointingHand)
     }
 
     private var countPillContent: some View {
@@ -198,11 +209,19 @@ struct QuickAccessBoxView: View {
         .background(Capsule().fill(Color.white.opacity(0.105)))
     }
 
-    private func chromeButton(systemImage: String, action: @escaping () -> Void) -> some View {
+    private func chromeButton(
+        systemImage: String,
+        isEnabled: Bool = true,
+        action: @escaping () -> Void
+    ) -> some View {
         Button(action: action) {
             chromeCircle(systemImage: systemImage)
+                .frame(width: Layout.chromeHitSize, height: Layout.chromeHitSize)
+                .contentShape(Circle())
         }
         .buttonStyle(.plain)
+        .disabled(!isEnabled)
+        .quickAccessCursor(isEnabled ? .pointingHand : .arrow)
     }
 
     private func chromeCircle(systemImage: String) -> some View {
@@ -384,14 +403,14 @@ struct QuickAccessBoxView: View {
                     x: Layout.chromeInset + Layout.chromeButtonSize / 2,
                     y: Layout.boxSize.height - Layout.chromeInset - Layout.chromeButtonSize / 2
                 ),
-                size: CGSize(width: 46, height: 46)
+                size: CGSize(width: Layout.chromeHitSize, height: Layout.chromeHitSize)
             ),
             handlePassthroughRect(
                 center: CGPoint(
                     x: Layout.boxSize.width - Layout.chromeInset - Layout.chromeButtonSize / 2,
                     y: Layout.boxSize.height - Layout.chromeInset - Layout.chromeButtonSize / 2
                 ),
-                size: CGSize(width: 46, height: 46)
+                size: CGSize(width: Layout.chromeHitSize, height: Layout.chromeHitSize)
             )
         ]
 

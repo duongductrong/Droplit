@@ -2,11 +2,14 @@ import AppKit
 import SwiftUI
 
 enum QuickAccessCursorStyle: Equatable {
+    case arrow
     case pointingHand
     case closedHand
 
     var cursor: NSCursor {
         switch self {
+        case .arrow:
+            return .arrow
         case .pointingHand:
             return .pointingHand
         case .closedHand:
@@ -17,40 +20,69 @@ enum QuickAccessCursorStyle: Equatable {
 
 private struct QuickAccessCursorModifier: ViewModifier {
     let style: QuickAccessCursorStyle
-    @State private var activeStyle: QuickAccessCursorStyle?
 
     func body(content: Content) -> some View {
         content
-            .onHover { hovering in
-                if hovering {
-                    push(style)
-                } else {
-                    pop()
-                }
-            }
-            .onChange(of: style) { newStyle in
-                guard activeStyle != nil else { return }
-                pop()
-                push(newStyle)
-            }
-            .onDisappear {
-                pop()
-            }
+            .background(QuickAccessCursorRectView(style: style))
+    }
+}
+
+private struct QuickAccessCursorRectView: NSViewRepresentable {
+    let style: QuickAccessCursorStyle
+
+    func makeNSView(context: Context) -> QuickAccessCursorRectNSView {
+        QuickAccessCursorRectNSView(style: style)
     }
 
-    private func push(_ newStyle: QuickAccessCursorStyle) {
-        guard activeStyle != newStyle else { return }
-        if activeStyle != nil {
-            NSCursor.pop()
+    func updateNSView(_ nsView: QuickAccessCursorRectNSView, context: Context) {
+        nsView.style = style
+    }
+}
+
+private final class QuickAccessCursorRectNSView: NSView {
+    var style: QuickAccessCursorStyle {
+        didSet {
+            window?.invalidateCursorRects(for: self)
+            refreshCursorIfMouseIsInside()
         }
-        newStyle.cursor.push()
-        activeStyle = newStyle
     }
 
-    private func pop() {
-        guard activeStyle != nil else { return }
-        NSCursor.pop()
-        activeStyle = nil
+    init(style: QuickAccessCursorStyle) {
+        self.style = style
+        super.init(frame: .zero)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: style.cursor)
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        nil
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        window?.invalidateCursorRects(for: self)
+        refreshCursorIfMouseIsInside()
+    }
+
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        window?.invalidateCursorRects(for: self)
+    }
+
+    private func refreshCursorIfMouseIsInside() {
+        guard let window else { return }
+        let windowPoint = window.convertPoint(fromScreen: NSEvent.mouseLocation)
+        let localPoint = convert(windowPoint, from: nil)
+        if bounds.contains(localPoint) {
+            style.cursor.set()
+        }
     }
 }
 

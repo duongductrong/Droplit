@@ -90,6 +90,7 @@ material treatment:
 | `size.quickAccessBox.width` | 206 | Box style rounded square surface |
 | `size.quickAccessBox.height` | 206 | Box style rounded square surface |
 | `size.quickAccessBox.chromeButton` | 24 | Box close and more controls |
+| `size.quickAccessBox.chromeHit` | 46 | Box chrome hit target and drag-handle passthrough |
 | `size.quickAccessBox.countPillHeight` | 28 | Box bottom count pill |
 
 ## Spacing
@@ -146,7 +147,7 @@ material treatment:
 - Box shows `QuickAccessBoxEmptyStateView` as its center CTA until real dropped items exist; pending drag state only updates the empty CTA copy and does not show the bottom pill.
 - Box preview never creates mock filler layers: one item renders one card, two items render two cards, and three or more items render the newest three actual queue items back-to-front.
 - Box drops create staged `QuickAccessItem` values and wait for the top-right batch action before moving them into the optimization queue; a visible Box also accepts supported incoming drags without requiring the summon trigger again.
-- Box top-right run control reuses the same chrome button treatment as close, and opens a compact batch action popover with current status before optimization starts; while running, the count pill reports finished progress such as `2/4 Done`.
+- Box top-right run control reuses the same chrome button treatment as close, and opens a compact batch action popover with current status before optimization starts; while running, top-right becomes a 30-point circular progress indicator and the count pill reports finished progress such as `2/4 Done`.
 - Box top-left close clears the full batch, and the bottom count pill opens `QuickAccessBoxItemsPopoverView`, a centered three-column media-only grid of clipped thumbnails with truncated names plus compact file-type, status, and per-item `original -> optimized` size labels.
 - Box center preview uses smaller borderless clipped thumbnails, preserving the real-item stack without overlapping the top chrome or bottom count pill.
 - Box count pill appears only after actual items exist, prefers the active item count while running, and switches to total `original -> optimized` size after completed outputs exist.

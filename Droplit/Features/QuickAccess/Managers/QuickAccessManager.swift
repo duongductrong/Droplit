@@ -298,6 +298,10 @@ final class QuickAccessManager: ObservableObject {
     }
 
     func removeAllItems(keepsSurfaceVisible: Bool = false) {
+        if !keepsSurfaceVisible {
+            panelController.hideImmediately()
+        }
+
         processTasks.values.forEach { $0.cancel() }
         thumbnailTasks.values.forEach { $0.cancel() }
         elapsedTasks.values.forEach { $0.cancel() }
@@ -310,11 +314,16 @@ final class QuickAccessManager: ObservableObject {
         placeholderTimeoutTask = nil
         keepsEmptyBoxOpen = keepsSurfaceVisible
 
-        withAnimation(QuickAccessAnimations.cardRemove) {
+        if keepsSurfaceVisible {
+            withAnimation(QuickAccessAnimations.cardRemove) {
+                items.removeAll()
+                isDropPlaceholderVisible = true
+            }
+            refreshPanel()
+        } else {
             items.removeAll()
-            isDropPlaceholderVisible = keepsSurfaceVisible
+            isDropPlaceholderVisible = false
         }
-        refreshPanel()
     }
 
     func revealOutput(for id: UUID) {

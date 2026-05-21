@@ -126,7 +126,11 @@ final class QuickAccessPanelController: NSObject, NSWindowDelegate {
     }
 
     func hide() {
-        guard let panel, !isAnimating else { return }
+        guard let panel else { return }
+        if isAnimating {
+            hideImmediately()
+            return
+        }
 
         if reduceMotion {
             NSAnimationContext.runAnimationGroup({ context in
@@ -134,12 +138,8 @@ final class QuickAccessPanelController: NSObject, NSWindowDelegate {
                 context.timingFunction = CAMediaTimingFunction(name: .easeIn)
                 panel.animator().alphaValue = 0
             }, completionHandler: { [weak self] in
-                panel.delegate = nil
-                panel.onEscapeKey = nil
-                panel.close()
                 MainActor.assumeIsolated {
-                    self?.panel = nil
-                    self?.manualFrameOrigin = nil
+                    self?.closePanel(panel)
                 }
             })
         } else {
@@ -158,16 +158,16 @@ final class QuickAccessPanelController: NSObject, NSWindowDelegate {
                 panel.animator().setFrame(NSRect(origin: offscreenOrigin, size: size), display: true)
                 panel.animator().alphaValue = 0.5
             }, completionHandler: { [weak self] in
-                panel.delegate = nil
-                panel.onEscapeKey = nil
-                panel.close()
                 MainActor.assumeIsolated {
-                    self?.panel = nil
-                    self?.manualFrameOrigin = nil
-                    self?.isAnimating = false
+                    self?.closePanel(panel)
                 }
             })
         }
+    }
+
+    func hideImmediately() {
+        guard let panel else { return }
+        closePanel(panel)
     }
 
     func windowDidMove(_ notification: Notification) {
@@ -193,6 +193,19 @@ final class QuickAccessPanelController: NSObject, NSWindowDelegate {
         isApplyingProgrammaticFrameChange = true
         change()
         isApplyingProgrammaticFrameChange = false
+    }
+
+    private func closePanel(_ closingPanel: QuickAccessPanel) {
+        closingPanel.delegate = nil
+        closingPanel.onEscapeKey = nil
+        closingPanel.orderOut(nil)
+        closingPanel.close()
+        if panel === closingPanel {
+            panel = nil
+            manualFrameOrigin = nil
+            isAnimating = false
+            isApplyingProgrammaticFrameChange = false
+        }
     }
 
     private func repositionPanel() {

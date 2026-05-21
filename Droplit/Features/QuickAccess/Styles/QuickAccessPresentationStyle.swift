@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 nonisolated enum QuickAccessPresentationStyle: String, CaseIterable, Codable, Identifiable {
@@ -101,6 +102,18 @@ struct QuickAccessPresentationView: View {
     }
 }
 
+private func runQuickAccessPresentationAction(_ action: @escaping @MainActor () -> Void) {
+    if Thread.isMainThread {
+        MainActor.assumeIsolated {
+            action()
+        }
+    } else {
+        Task { @MainActor in
+            action()
+        }
+    }
+}
+
 extension QuickAccessManager {
     var presentationContext: QuickAccessPresentationContext {
         QuickAccessPresentationContext(
@@ -114,53 +127,63 @@ extension QuickAccessManager {
     var presentationActions: QuickAccessPresentationActions {
         QuickAccessPresentationActions(
             ingestDroppedURLs: { [weak self] urls in
-                Task { @MainActor in
-                    self?.ingestDroppedURLs(urls)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.ingestDroppedURLs(urls)
                 }
             },
             stageDroppedURLs: { [weak self] urls in
-                Task { @MainActor in
-                    self?.stageDroppedURLs(urls)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.stageDroppedURLs(urls)
                 }
             },
             dismissSurface: { [weak self] in
-                Task { @MainActor in
-                    self?.dismissQuickAccessSurface()
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.dismissQuickAccessSurface()
                 }
             },
             removeItem: { [weak self] id in
-                Task { @MainActor in
-                    self?.removeItem(id: id)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.removeItem(id: id)
                 }
             },
             removeAllItems: { [weak self] in
-                Task { @MainActor in
-                    self?.removeAllItems()
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.removeAllItems()
                 }
             },
             clearItemsKeepingSurfaceVisible: { [weak self] in
-                Task { @MainActor in
-                    self?.removeAllItems(keepsSurfaceVisible: true)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.removeAllItems(keepsSurfaceVisible: true)
                 }
             },
             openItem: { [weak self] id in
-                Task { @MainActor in
-                    self?.openItem(for: id)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.openItem(for: id)
                 }
             },
             revealOutput: { [weak self] id in
-                Task { @MainActor in
-                    self?.revealOutput(for: id)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.revealOutput(for: id)
                 }
             },
             convertItem: { [weak self] id, target in
-                Task { @MainActor in
-                    self?.convertItem(id: id, to: target)
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.convertItem(id: id, to: target)
                 }
             },
             processAllStagedItems: { [weak self] in
-                Task { @MainActor in
-                    self?.processAllStagedItems()
+                guard let self else { return }
+                runQuickAccessPresentationAction {
+                    self.processAllStagedItems()
                 }
             }
         )
