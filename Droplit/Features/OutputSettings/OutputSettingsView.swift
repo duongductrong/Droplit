@@ -33,12 +33,19 @@ struct OutputSettingsView: View {
                             chooseOutputDirectory()
                         }
                     } else {
-                        Text("Managed by Droplit")
-                            .foregroundColor(.secondary)
+                        temporaryStorageButton
                     }
                 }
 
-                if !saveLocationEnabled {
+                if saveLocationEnabled {
+                    DroplitSettingsDivider()
+                    DroplitSettingsControlRow(
+                        title: "Internal Storage",
+                        subtitle: temporaryStorageDescription
+                    ) {
+                        temporaryStorageButton
+                    }
+                } else {
                     DroplitSettingsDivider()
                     DroplitSettingsControlRow(
                         title: "Delete After",
@@ -114,6 +121,10 @@ struct OutputSettingsView: View {
         "\(destinationName)\n\(destinationPath)"
     }
 
+    private var temporaryStorageDescription: String {
+        "Temporary output folder\n\(OptimizationTemporaryFileStore.outputDirectory.path)"
+    }
+
     private var retentionText: String {
         temporaryRetentionDays == 1 ? "1 day" : "\(temporaryRetentionDays) days"
     }
@@ -131,6 +142,14 @@ struct OutputSettingsView: View {
                 in: OptimizationOutputSettings.allowedTemporaryRetentionDays
             )
             .labelsHidden()
+        }
+    }
+
+    private var temporaryStorageButton: some View {
+        Button {
+            openTemporaryOutputDirectory()
+        } label: {
+            Label("Show in Finder", systemImage: "folder")
         }
     }
 
@@ -154,5 +173,26 @@ struct OutputSettingsView: View {
         guard panel.runModal() == .OK, let url = panel.url else { return }
         OptimizationOutputSettings.outputDirectory = url
         outputDirectory = url
+    }
+
+    private func openTemporaryOutputDirectory() {
+        do {
+            let url = try OptimizationTemporaryFileStore.ensureOutputDirectory()
+            guard NSWorkspace.shared.open(url) else {
+                showTemporaryStorageOpenError("Finder could not open \(url.path).")
+                return
+            }
+        } catch {
+            showTemporaryStorageOpenError(error.localizedDescription)
+        }
+    }
+
+    private func showTemporaryStorageOpenError(_ message: String) {
+        let alert = NSAlert()
+        alert.messageText = "Could Not Open Temporary Storage"
+        alert.informativeText = message
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "OK")
+        alert.runModal()
     }
 }

@@ -207,7 +207,7 @@ docs/
 33. Quick Access presentation styles own their own visible item selection, panel size, active hit region height, outer shadow margin, and SwiftUI root view.
 34. To add another visual treatment, add a `QuickAccessPresentationStyle` case and a `QuickAccessPresentationStyleProviding` implementation that maps the shared context/actions into its own view.
 
-Output destination and retention are changed from the Settings window Output configuration.
+Output destination, internal temporary folder access, and retention are changed from the Settings window Output configuration.
 Parallel job count is changed from the Settings window Concurrency configuration.
 
 ## Home and Settings UI
@@ -221,7 +221,7 @@ Parallel job count is changed from the Settings window Concurrency configuration
 7. `DroplitSettingsGroup`, `DroplitSettingsControlRow`, `DroplitSettingsValueRow`, and `DroplitSettingsAlignedRow` provide the shared native settings row treatment.
 8. `InfoSettingsView` About is the default standalone landing page.
 9. `QuickAccessSettingsView` owns Quick Access style, trigger, placement, after-processing, preview, and concurrency controls.
-10. `OutputSettingsView` owns save location, destination folder, temp retention, and conversion output behavior.
+10. `OutputSettingsView` owns save location, destination folder, internal temporary folder reveal, temp retention, and conversion output behavior.
 11. `ToolsSettingsView` owns optimizer status and Homebrew install action.
 12. `QueueSettingsView` owns the Media Optimization status, remove actions, and file import entry point.
 
