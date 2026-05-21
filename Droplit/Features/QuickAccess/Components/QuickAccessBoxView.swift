@@ -12,6 +12,28 @@ struct QuickAccessBoxView: View {
     private typealias Layout = QuickAccessBoxLayout
 
     var body: some View {
+        ZStack {
+            boxPlacement
+
+            if showsDropReceiver {
+                expandedDropReceiver
+            }
+        }
+        .frame(width: Layout.panelSize.width, height: Layout.panelSize.height)
+        .onChange(of: context.items.isEmpty) { isEmpty in
+            if isEmpty {
+                isItemsPopoverPresented = false
+                isBatchActionsPopoverPresented = false
+            }
+        }
+        .onChange(of: showsDropReceiver) { isVisible in
+            if !isVisible {
+                isTargeted = false
+            }
+        }
+    }
+
+    private var boxPlacement: some View {
         VStack(spacing: 0) {
             if context.position.isTopEdge {
                 boxSurface
@@ -22,13 +44,6 @@ struct QuickAccessBoxView: View {
             }
         }
         .padding(Layout.shadowMargin)
-        .frame(width: Layout.panelSize.width, height: Layout.panelSize.height)
-        .onChange(of: context.items.isEmpty) { isEmpty in
-            if isEmpty {
-                isItemsPopoverPresented = false
-                isBatchActionsPopoverPresented = false
-            }
-        }
     }
 
     private var boxSurface: some View {
@@ -47,16 +62,6 @@ struct QuickAccessBoxView: View {
                     .offset(y: -7)
             }
 
-            if context.isDropPlaceholderVisible {
-                QuickAccessDropReceiverView(
-                    isTargeted: $isTargeted,
-                    movesWindowOnMouseDown: !showsPreviewStack
-                ) { urls in
-                    actions.stageDroppedURLs(urls)
-                }
-                .frame(width: Layout.boxSize.width, height: Layout.boxSize.height)
-            }
-
             chromeOverlay
         }
         .frame(width: Layout.boxSize.width, height: Layout.boxSize.height)
@@ -71,9 +76,20 @@ struct QuickAccessBoxView: View {
                 actions.openItem(item.id)
             }
         }
-        .shadow(color: .black.opacity(isTargeted ? 0.32 : 0.24), radius: isTargeted ? 28 : 22, x: 0, y: 16)
-        .shadow(color: .black.opacity(0.24), radius: 7, x: 0, y: 2)
+        .compositingGroup()
+        .shadow(color: .black.opacity(isTargeted ? 0.18 : 0.12), radius: isTargeted ? 16 : 13, x: 0, y: 5)
+        .shadow(color: .black.opacity(isTargeted ? 0.08 : 0.055), radius: isTargeted ? 5 : 4, x: 0, y: 1)
         .animation(QuickAccessAnimations.hoverOverlay, value: isTargeted)
+    }
+
+    private var expandedDropReceiver: some View {
+        QuickAccessDropReceiverView(
+            isTargeted: $isTargeted,
+            movesWindowOnMouseDown: dropReceiverMovesWindowOnMouseDown
+        ) { urls in
+            actions.stageDroppedURLs(urls)
+        }
+        .frame(width: Layout.panelSize.width, height: Layout.panelSize.height)
     }
 
     private var previewStack: some View {
@@ -272,6 +288,16 @@ struct QuickAccessBoxView: View {
         !context.items.isEmpty
     }
 
+    private var showsDropReceiver: Bool {
+        context.pendingDropSummary != nil
+            || isTargeted
+            || (!showsPreviewStack && context.isDropPlaceholderVisible)
+    }
+
+    private var dropReceiverMovesWindowOnMouseDown: Bool {
+        !showsPreviewStack && context.pendingDropSummary == nil
+    }
+
     private func itemNoun(for count: Int) -> String {
         let singular = count == 1
         if context.items.allSatisfy(\.kind.isImageLike) { return singular ? "Image" : "Images" }
@@ -285,10 +311,7 @@ struct QuickAccessBoxView: View {
     private var boxShape: RoundedRectangle { RoundedRectangle(cornerRadius: Layout.cornerRadius, style: .continuous) }
 
     private var boxBorder: some View {
-        ZStack {
-            boxShape.strokeBorder(.white.opacity(isTargeted ? 0.28 : 0.14), lineWidth: isTargeted ? 1.6 : 1.1)
-            boxShape.strokeBorder(.black.opacity(0.46), lineWidth: 1).padding(1)
-        }
+        boxShape.strokeBorder(.white.opacity(isTargeted ? 0.18 : 0.08), lineWidth: isTargeted ? 1 : 0.8)
     }
 
     private var boxDragPassthroughRects: [CGRect] {

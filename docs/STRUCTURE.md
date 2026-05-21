@@ -198,6 +198,7 @@ docs/
     Before actual dropped items exist, Box shows an empty drop CTA instead of the stacked preview.
     Once items exist, Box stacks at most the newest three real `QuickAccessItem` thumbnails and does not synthesize mock preview layers.
 32. Box drops stage items first; the top-right run button uses the same chrome styling as close, opens a compact batch action popover, and then moves the staged batch into the optimization queue after user selection.
+    A visible Box accepts supported incoming file drags directly, so users can add to an existing Box without summoning the placeholder again.
     While the batch runs, Box surfaces completion progress in the count pill and per-item status in the grid popover.
     Completed Box batches show total original-to-optimized size in the count pill and popover header.
     The top-left close clears every dropped item, and the bottom count pill opens a centered three-column media-only grid popover with clipped thumbnails, truncated names, and compact file-type/status/size text.

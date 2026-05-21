@@ -399,6 +399,10 @@ final class QuickAccessManager: ObservableObject {
         placeholderTimeoutTask?.cancel()
         let hasOptimizableDragPayload = refreshCurrentDragPayloadEligibility()
 
+        if activateVisibleBoxDropTargetIfNeeded(hasOptimizableDragPayload: hasOptimizableDragPayload) {
+            return
+        }
+
         switch triggerInteraction {
         case .shake:
             holdTriggerTask?.cancel()
@@ -480,6 +484,23 @@ final class QuickAccessManager: ObservableObject {
         }
 
         return isCurrentDragPayloadOptimizable
+    }
+
+    private func activateVisibleBoxDropTargetIfNeeded(hasOptimizableDragPayload: Bool) -> Bool {
+        guard hasOptimizableDragPayload,
+              presentationStyle == .box,
+              !items.isEmpty else {
+            return false
+        }
+
+        shakeDetector.reset()
+        holdTriggerTask?.cancel()
+        holdTriggerTask = nil
+
+        if !isDropPlaceholderVisible {
+            showDropPlaceholder(shouldTimeout: false)
+        }
+        return true
     }
 
     private func resetDragPayloadState(markCurrentPasteboardConsumed: Bool) {

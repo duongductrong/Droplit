@@ -127,7 +127,8 @@ material treatment:
 | --- | --- | --- |
 | `shadow.quickAccessCard.ambient` | 29-34 radius, 12-15 y, black 8-11% | Main floating card lift |
 | `shadow.quickAccessCard.contact` | 8-11 radius, 3-4 y, black 4-5.5% | Close contact shadow under the card |
-| `shadow.quickAccessBox` | 22-28 radius, 16 y, black 24-32% | Box style floating surface lift |
+| `shadow.quickAccessBox.ambient` | 13-16 radius, 5 y, black 12-18% | Soft Box style floating surface lift |
+| `shadow.quickAccessBox.contact` | 4-5 radius, 1 y, black 5.5-8% | Tight Box edge separation shadow |
 
 ## Implementation Map
 
@@ -144,7 +145,7 @@ material treatment:
 - Box style uses `QuickAccessBoxPresentationStyle` for metrics and `QuickAccessBoxView` plus `QuickAccessBoxPreviewView` for its rounded square, top chrome controls, real-item layered preview, and item count pill.
 - Box shows `QuickAccessBoxEmptyStateView` as its center CTA until real dropped items exist; pending drag state only updates the empty CTA copy and does not show the bottom pill.
 - Box preview never creates mock filler layers: one item renders one card, two items render two cards, and three or more items render the newest three actual queue items back-to-front.
-- Box drops create staged `QuickAccessItem` values and wait for the top-right batch action before moving them into the optimization queue.
+- Box drops create staged `QuickAccessItem` values and wait for the top-right batch action before moving them into the optimization queue; a visible Box also accepts supported incoming drags without requiring the summon trigger again.
 - Box top-right run control reuses the same chrome button treatment as close, and opens a compact batch action popover with current status before optimization starts; while running, the count pill reports finished progress such as `2/4 Done`.
 - Box top-left close clears the full batch, and the bottom count pill opens `QuickAccessBoxItemsPopoverView`, a centered three-column media-only grid of clipped thumbnails with truncated names plus compact file-type, status, and per-item `original -> optimized` size labels.
 - Box center preview uses smaller borderless clipped thumbnails, preserving the real-item stack without overlapping the top chrome or bottom count pill.
