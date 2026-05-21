@@ -598,6 +598,10 @@ nonisolated struct QuickAccessItem: Identifiable {
         }
         return outputURL == preferredExternalDragURL
     }
+
+    var removesAfterExternalDrag: Bool {
+        state == .completed && usesOptimizedExternalDragURL
+    }
 }
 
 extension ByteCountFormatter {

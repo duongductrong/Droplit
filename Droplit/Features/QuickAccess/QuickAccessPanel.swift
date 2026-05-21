@@ -1,6 +1,9 @@
 import AppKit
 
 final class QuickAccessPanel: NSPanel {
+    var onEscapeKey: (() -> Void)?
+    var handlesKeyboardShortcuts = false
+
     private var activeContentHeight: CGFloat = 0
     private var activeEdge: QuickAccessPanelEdge = .bottom
     private var localMouseMonitor: Any?
@@ -97,6 +100,19 @@ final class QuickAccessPanel: NSPanel {
         ignoresMouseEvents = !containsInteractivePoint(NSEvent.mouseLocation)
     }
 
-    override var canBecomeKey: Bool { false }
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 53 {
+            onEscapeKey?()
+            return
+        }
+
+        super.keyDown(with: event)
+    }
+
+    override func cancelOperation(_ sender: Any?) {
+        onEscapeKey?()
+    }
+
+    override var canBecomeKey: Bool { handlesKeyboardShortcuts }
     override var canBecomeMain: Bool { false }
 }

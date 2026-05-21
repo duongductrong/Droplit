@@ -276,7 +276,7 @@ struct QuickAccessCardView: View, Equatable {
     }
 
     private func beginExternalDragIfPossible() -> Bool {
-        guard let dragURL = externalDragURL else { return false }
+        guard let dragURL = item.preferredExternalDragURL else { return false }
 
         isDraggingExternally = true
         let didBegin = QuickAccessExternalDragSession.begin(
@@ -284,7 +284,7 @@ struct QuickAccessCardView: View, Equatable {
             thumbnail: item.thumbnail
         ) { success in
             isDraggingExternally = false
-            if success {
+            if success, item.removesAfterExternalDrag {
                 onRemove(item.id)
             }
         }
@@ -293,15 +293,6 @@ struct QuickAccessCardView: View, Equatable {
             isDraggingExternally = false
         }
         return didBegin
-    }
-
-    private var externalDragURL: URL? {
-        guard item.state == .completed,
-              let outputURL = item.outputURL,
-              FileManager.default.fileExists(atPath: outputURL.path) else {
-            return nil
-        }
-        return outputURL
     }
 
     private func dismissCard(inDirection direction: CGFloat) {

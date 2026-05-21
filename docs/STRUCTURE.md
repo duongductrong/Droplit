@@ -185,9 +185,11 @@ docs/
 22. Video/GIF conversion targets are GIF, MOV, and MP4.
 23. Conversion actions always read `QuickAccessItem.sourceURL`, not the optimized output URL, so repeated switches do not chain from a compressed/downscaled derivative.
 24. Swipe a Quick Access result card left or right to dismiss that card.
-25. Drag a completed Quick Access card away from its dismiss direction to drop the optimized or converted output into external apps.
+25. Drag any Quick Access stack card with an available file away from its dismiss direction to drop it into external apps.
+    Completed stack cards drag their optimized or converted output when it exists; staged, queued, processing, and failed stack cards drag the original source file.
 26. External drag uses file URL pasteboard payloads for broad Finder, native app, and browser compatibility.
-    Stack cards drag one completed output; Box preview stack layers and Box popover cells drag their source file before optimization or their output file after optimization.
+    Stack overflow drags all available item files together; Box preview stack layers and Box popover cells drag their source file before optimization or their output file after optimization.
+    After a successful Box preview stack drag, the Box clears its stacked items and stays open in the empty drop state until the user closes it.
 27. Double-click a card to open the optimized or converted output, falling back to the source file when output is unavailable.
 28. Completed Quick Access cards stay visible for the configured result-card duration, defaulting to 15 seconds; selecting Never keeps them visible until removed.
 29. When enabled in Quick Access settings, each finished optimized output file is copied to the system clipboard.

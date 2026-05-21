@@ -34,6 +34,8 @@ struct QuickAccessBoxView: View {
     private var boxSurface: some View {
         ZStack {
             boxBackground
+            QuickAccessBoxDragHandleView(passthroughRects: boxDragPassthroughRects)
+                .frame(width: Layout.boxSize.width, height: Layout.boxSize.height)
 
             if showsPreviewStack {
                 previewStack
@@ -46,7 +48,10 @@ struct QuickAccessBoxView: View {
             }
 
             if context.isDropPlaceholderVisible {
-                QuickAccessDropReceiverView(isTargeted: $isTargeted) { urls in
+                QuickAccessDropReceiverView(
+                    isTargeted: $isTargeted,
+                    movesWindowOnMouseDown: !showsPreviewStack
+                ) { urls in
                     actions.stageDroppedURLs(urls)
                 }
                 .frame(width: Layout.boxSize.width, height: Layout.boxSize.height)
@@ -72,7 +77,12 @@ struct QuickAccessBoxView: View {
     }
 
     private var previewStack: some View {
-        QuickAccessBoxPreviewView(items: context.items, isTargeted: isTargeted, reduceMotion: reduceMotion)
+        QuickAccessBoxPreviewView(
+            items: context.items,
+            isTargeted: isTargeted,
+            reduceMotion: reduceMotion,
+            onExternalDragCompleted: actions.clearItemsKeepingSurfaceVisible
+        )
             .offset(y: -5)
             .contentShape(Rectangle())
     }
@@ -280,6 +290,51 @@ struct QuickAccessBoxView: View {
             boxShape.strokeBorder(.black.opacity(0.46), lineWidth: 1).padding(1)
         }
     }
+
+    private var boxDragPassthroughRects: [CGRect] {
+        var rects = [
+            handlePassthroughRect(
+                center: CGPoint(
+                    x: Layout.chromeInset + Layout.chromeButtonSize / 2,
+                    y: Layout.boxSize.height - Layout.chromeInset - Layout.chromeButtonSize / 2
+                ),
+                size: CGSize(width: 46, height: 46)
+            ),
+            handlePassthroughRect(
+                center: CGPoint(
+                    x: Layout.boxSize.width - Layout.chromeInset - Layout.chromeButtonSize / 2,
+                    y: Layout.boxSize.height - Layout.chromeInset - Layout.chromeButtonSize / 2
+                ),
+                size: CGSize(width: 46, height: 46)
+            )
+        ]
+
+        if showsPreviewStack {
+            rects.append(
+                handlePassthroughRect(
+                    center: CGPoint(x: Layout.boxSize.width / 2, y: Layout.boxSize.height / 2),
+                    size: CGSize(width: 160, height: 146)
+                )
+            )
+            rects.append(
+                handlePassthroughRect(
+                    center: CGPoint(x: Layout.boxSize.width / 2, y: Layout.countPillBottomInset + Layout.countPillHeight / 2),
+                    size: CGSize(width: 146, height: 42)
+                )
+            )
+        }
+
+        return rects
+    }
+
+    private func handlePassthroughRect(center: CGPoint, size: CGSize) -> CGRect {
+        CGRect(
+            x: center.x - size.width / 2,
+            y: center.y - size.height / 2,
+            width: size.width,
+            height: size.height
+        )
+    }
 }
 
 private extension QuickAccessFileKind {
@@ -290,5 +345,33 @@ private extension QuickAccessFileKind {
         case .video, .pdf, .unknown:
             return false
         }
+    }
+}
+
+private struct QuickAccessBoxDragHandleView: NSViewRepresentable {
+    let passthroughRects: [CGRect]
+
+    func makeNSView(context: Context) -> QuickAccessBoxDragHandleNSView {
+        let view = QuickAccessBoxDragHandleNSView()
+        view.passthroughRects = passthroughRects
+        return view
+    }
+
+    func updateNSView(_ nsView: QuickAccessBoxDragHandleNSView, context: Context) {
+        nsView.passthroughRects = passthroughRects
+    }
+}
+
+private final class QuickAccessBoxDragHandleNSView: NSView {
+    var passthroughRects: [CGRect] = []
+
+    override var mouseDownCanMoveWindow: Bool { true }
+
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        passthroughRects.contains { $0.contains(point) } ? nil : super.hitTest(point)
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
     }
 }

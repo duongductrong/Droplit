@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct QuickAccessStackView: View {
@@ -41,14 +42,22 @@ struct QuickAccessStackView: View {
             }
 
             if hasOverflowCard {
-                QuickAccessOverflowCardView(summary: overflowSummary, reduceMotion: reduceMotion)
-                    .equatable()
+                QuickAccessOverflowCardView(
+                    summary: overflowSummary,
+                    dragBundle: overflowDragBundle,
+                    onRemove: actions.removeItem,
+                    reduceMotion: reduceMotion
+                )
                     .transition(cardTransition)
             }
         } else {
             if hasOverflowCard {
-                QuickAccessOverflowCardView(summary: overflowSummary, reduceMotion: reduceMotion)
-                    .equatable()
+                QuickAccessOverflowCardView(
+                    summary: overflowSummary,
+                    dragBundle: overflowDragBundle,
+                    onRemove: actions.removeItem,
+                    reduceMotion: reduceMotion
+                )
                     .transition(cardTransition)
             }
 
@@ -134,9 +143,41 @@ struct QuickAccessStackView: View {
         )
     }
 
+    private var overflowDragBundle: QuickAccessStackExternalDragBundle? {
+        let entries = context.items.compactMap { item -> QuickAccessStackExternalDragEntry? in
+            guard let fileURL = item.preferredExternalDragURL else { return nil }
+            return QuickAccessStackExternalDragEntry(
+                id: item.id,
+                fileURL: fileURL,
+                thumbnail: item.thumbnail,
+                removesAfterDrag: item.removesAfterExternalDrag
+            )
+        }
+        guard let firstEntry = entries.first else { return nil }
+
+        return QuickAccessStackExternalDragBundle(
+            fileURLs: entries.map(\.fileURL),
+            removableItemIDs: entries.filter(\.removesAfterDrag).map(\.id),
+            thumbnail: firstEntry.thumbnail
+        )
+    }
+
     private func countItems(in state: QuickAccessJobState) -> Int {
         context.items.filter { $0.state == state }.count
     }
+}
+
+private struct QuickAccessStackExternalDragEntry {
+    let id: UUID
+    let fileURL: URL
+    let thumbnail: NSImage
+    let removesAfterDrag: Bool
+}
+
+private struct QuickAccessStackExternalDragBundle {
+    let fileURLs: [URL]
+    let removableItemIDs: [UUID]
+    let thumbnail: NSImage
 }
 
 private struct QuickAccessOverflowSummary: Equatable {
@@ -148,15 +189,13 @@ private struct QuickAccessOverflowSummary: Equatable {
     let failedCount: Int
 }
 
-private struct QuickAccessOverflowCardView: View, Equatable {
+private struct QuickAccessOverflowCardView: View {
     let summary: QuickAccessOverflowSummary
+    let dragBundle: QuickAccessStackExternalDragBundle?
+    let onRemove: (UUID) -> Void
     let reduceMotion: Bool
     @State private var isHovering = false
-
-    static func == (lhs: QuickAccessOverflowCardView, rhs: QuickAccessOverflowCardView) -> Bool {
-        lhs.summary == rhs.summary
-            && lhs.reduceMotion == rhs.reduceMotion
-    }
+    @State private var isDraggingExternally = false
 
     var body: some View {
         ZStack {
@@ -174,7 +213,12 @@ private struct QuickAccessOverflowCardView: View, Equatable {
         .overlay(cardShape.strokeBorder(.white.opacity(0.16), lineWidth: 1))
         .compositingGroup()
         .quickAccessCardShadow(isRaised: isHovering)
+        .opacity(isDraggingExternally ? 0.62 : 1)
         .scaleEffect(isHovering && !reduceMotion ? 1.008 : 1)
+        .contentShape(cardShape)
+        .gesture(externalDragGesture)
+        .help(dragHelpText)
+        .quickAccessCursor(isDraggingExternally ? .closedHand : .pointingHand)
         .onHover { hovering in
             withAnimation(QuickAccessAnimations.hoverOverlay) {
                 isHovering = hovering
@@ -278,6 +322,43 @@ private struct QuickAccessOverflowCardView: View, Equatable {
 
     private var cardShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: QuickAccessLayout.cornerRadius, style: .continuous)
+    }
+
+    private var externalDragGesture: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                guard !isDraggingExternally,
+                      hypot(value.translation.width, value.translation.height) > 8 else {
+                    return
+                }
+                beginExternalDragIfPossible()
+            }
+    }
+
+    private func beginExternalDragIfPossible() {
+        guard let dragBundle else { return }
+
+        isDraggingExternally = true
+        let didBegin = QuickAccessExternalDragSession.begin(
+            fileURLs: dragBundle.fileURLs,
+            thumbnail: dragBundle.thumbnail
+        ) { success in
+            isDraggingExternally = false
+            if success {
+                dragBundle.removableItemIDs.forEach(onRemove)
+            }
+        }
+
+        if !didBegin {
+            isDraggingExternally = false
+        }
+    }
+
+    private var dragHelpText: String {
+        guard let dragBundle else { return "\(summary.hiddenCount) hidden items" }
+        return dragBundle.fileURLs.count == 1
+            ? "Drag available file"
+            : "Drag \(dragBundle.fileURLs.count) available files"
     }
 
     private var summaryText: String {

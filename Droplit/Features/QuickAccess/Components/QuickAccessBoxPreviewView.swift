@@ -5,18 +5,17 @@ struct QuickAccessBoxPreviewView: View {
     let items: [QuickAccessItem]
     let isTargeted: Bool
     let reduceMotion: Bool
+    let onExternalDragCompleted: () -> Void
 
     var body: some View {
         ZStack {
             ForEach(layersBackToFront) { layer in
-                QuickAccessBoxPreviewItemCard(layer: layer)
+                QuickAccessBoxPreviewLayerView(
+                    layer: layer,
+                    onExternalDragCompleted: onExternalDragCompleted
+                )
                     .rotationEffect(.degrees(layer.rotation))
                     .offset(layer.offset)
-                    .onDrag {
-                        layer.dragItemProvider
-                    }
-                    .help(layer.helpText)
-                    .quickAccessCursor(.pointingHand)
             }
         }
         .frame(width: 126, height: 112)
@@ -102,15 +101,53 @@ private struct QuickAccessBoxPreviewLayer: Identifiable {
 
     var id: UUID { item.id }
 
-    var dragItemProvider: NSItemProvider {
-        guard let preferredExternalDragURL = item.preferredExternalDragURL else {
-            return NSItemProvider()
-        }
-        return NSItemProvider(object: preferredExternalDragURL as NSURL)
-    }
-
     var helpText: String {
         item.usesOptimizedExternalDragURL ? "Drag optimized output" : "Drag original file"
+    }
+}
+
+private struct QuickAccessBoxPreviewLayerView: View {
+    let layer: QuickAccessBoxPreviewLayer
+    let onExternalDragCompleted: () -> Void
+    @State private var isDraggingExternally = false
+
+    var body: some View {
+        QuickAccessBoxPreviewItemCard(layer: layer)
+            .opacity(isDraggingExternally ? 0.62 : 1)
+            .contentShape(RoundedRectangle(cornerRadius: layer.cornerRadius, style: .continuous))
+            .gesture(externalDragGesture)
+            .help(layer.helpText)
+            .quickAccessCursor(isDraggingExternally ? .closedHand : .pointingHand)
+    }
+
+    private var externalDragGesture: some Gesture {
+        DragGesture(minimumDistance: 6)
+            .onChanged { value in
+                guard !isDraggingExternally,
+                      hypot(value.translation.width, value.translation.height) > 8 else {
+                    return
+                }
+                beginExternalDragIfPossible()
+            }
+    }
+
+    private func beginExternalDragIfPossible() {
+        guard let dragURL = layer.item.preferredExternalDragURL else { return }
+
+        isDraggingExternally = true
+        let didBegin = QuickAccessExternalDragSession.begin(
+            fileURL: dragURL,
+            thumbnail: layer.item.thumbnail
+        ) { success in
+            isDraggingExternally = false
+            if success {
+                onExternalDragCompleted()
+            }
+        }
+
+        if !didBegin {
+            isDraggingExternally = false
+        }
     }
 }
 

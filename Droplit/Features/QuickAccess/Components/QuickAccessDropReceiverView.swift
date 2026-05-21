@@ -3,26 +3,38 @@ import SwiftUI
 
 struct QuickAccessDropReceiverView: NSViewRepresentable {
     @Binding var isTargeted: Bool
+    var movesWindowOnMouseDown = true
     let onDrop: ([URL]) -> Void
 
     func makeNSView(context: Context) -> DropReceiverNSView {
-        DropReceiverNSView(isTargeted: $isTargeted, onDrop: onDrop)
+        DropReceiverNSView(
+            isTargeted: $isTargeted,
+            movesWindowOnMouseDown: movesWindowOnMouseDown,
+            onDrop: onDrop
+        )
     }
 
     func updateNSView(_ nsView: DropReceiverNSView, context: Context) {
         nsView.isTargeted = $isTargeted
+        nsView.movesWindowOnMouseDown = movesWindowOnMouseDown
         nsView.onDrop = onDrop
     }
 }
 
 final class DropReceiverNSView: NSView {
     var isTargeted: Binding<Bool>
+    var movesWindowOnMouseDown: Bool
     var onDrop: ([URL]) -> Void
     private var cachedPasteboardChangeCount: Int?
     private var cachedHasSupportedPayload = false
 
-    init(isTargeted: Binding<Bool>, onDrop: @escaping ([URL]) -> Void) {
+    init(
+        isTargeted: Binding<Bool>,
+        movesWindowOnMouseDown: Bool,
+        onDrop: @escaping ([URL]) -> Void
+    ) {
         self.isTargeted = isTargeted
+        self.movesWindowOnMouseDown = movesWindowOnMouseDown
         self.onDrop = onDrop
         super.init(frame: .zero)
         registerForDraggedTypes([
@@ -73,6 +85,16 @@ final class DropReceiverNSView: NSView {
     override func concludeDragOperation(_ sender: NSDraggingInfo?) {
         resetPayloadCache()
         updateTargeted(false)
+    }
+
+    override var mouseDownCanMoveWindow: Bool { movesWindowOnMouseDown }
+
+    override func mouseDown(with event: NSEvent) {
+        if movesWindowOnMouseDown {
+            window?.performDrag(with: event)
+        } else {
+            super.mouseDown(with: event)
+        }
     }
 
     private func dragOperation(for sender: NSDraggingInfo) -> NSDragOperation {

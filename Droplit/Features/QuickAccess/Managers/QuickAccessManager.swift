@@ -93,6 +93,7 @@ final class QuickAccessManager: ObservableObject {
     private var lastCompletedDragPasteboardChangeCount = NSPasteboard(name: .drag).changeCount
     private var currentDragPasteboardChangeCount: Int?
     private var isCurrentDragPayloadOptimizable = false
+    private var keepsEmptyBoxOpen = false
     private var processTasks: [UUID: Task<Void, Never>] = [:]
     private var thumbnailTasks: [UUID: Task<Void, Never>] = [:]
     private var elapsedTasks: [UUID: Task<Void, Never>] = [:]
@@ -183,6 +184,7 @@ final class QuickAccessManager: ObservableObject {
         holdTriggerTask?.cancel()
         holdTriggerTask = nil
         isDragSessionActive = false
+        keepsEmptyBoxOpen = false
         resetDragPayloadState(markCurrentPasteboardConsumed: true)
         processTasks.values.forEach { $0.cancel() }
         thumbnailTasks.values.forEach { $0.cancel() }
@@ -202,6 +204,7 @@ final class QuickAccessManager: ObservableObject {
     func dismissQuickAccessSurface() {
         placeholderTimeoutTask?.cancel()
         placeholderTimeoutTask = nil
+        keepsEmptyBoxOpen = false
 
         if isDropPlaceholderVisible {
             withAnimation(QuickAccessAnimations.cardRemove) {
@@ -214,6 +217,7 @@ final class QuickAccessManager: ObservableObject {
 
     private func showDropPlaceholder(shouldTimeout: Bool) {
         placeholderTimeoutTask?.cancel()
+        keepsEmptyBoxOpen = false
         withAnimation(QuickAccessAnimations.cardInsert) {
             isDropPlaceholderVisible = true
         }
@@ -240,6 +244,7 @@ final class QuickAccessManager: ObservableObject {
         guard !supported.isEmpty else { return }
 
         isDragSessionActive = false
+        keepsEmptyBoxOpen = false
         resetDragTriggerState()
         resetDragPayloadState(markCurrentPasteboardConsumed: true)
         placeholderTimeoutTask?.cancel()
@@ -292,7 +297,7 @@ final class QuickAccessManager: ObservableObject {
         schedulePendingJobs()
     }
 
-    func removeAllItems() {
+    func removeAllItems(keepsSurfaceVisible: Bool = false) {
         processTasks.values.forEach { $0.cancel() }
         thumbnailTasks.values.forEach { $0.cancel() }
         elapsedTasks.values.forEach { $0.cancel() }
@@ -303,10 +308,11 @@ final class QuickAccessManager: ObservableObject {
         completedDismissTasks.removeAll()
         placeholderTimeoutTask?.cancel()
         placeholderTimeoutTask = nil
+        keepsEmptyBoxOpen = keepsSurfaceVisible
 
         withAnimation(QuickAccessAnimations.cardRemove) {
             items.removeAll()
-            isDropPlaceholderVisible = false
+            isDropPlaceholderVisible = keepsSurfaceVisible
         }
         refreshPanel()
     }
@@ -454,6 +460,7 @@ final class QuickAccessManager: ObservableObject {
         resetDragTriggerState()
         resetDragPayloadState(markCurrentPasteboardConsumed: true)
         guard isDropPlaceholderVisible else { return }
+        guard !keepsEmptyBoxOpen else { return }
         schedulePlaceholderTimeout(after: placeholderPostDragTimeout)
     }
 
@@ -689,7 +696,7 @@ final class QuickAccessManager: ObservableObject {
     }
 
     private func hidePlaceholderIfIdle() {
-        guard isDropPlaceholderVisible, !isDragSessionActive else { return }
+        guard isDropPlaceholderVisible, !isDragSessionActive, !keepsEmptyBoxOpen else { return }
         withAnimation(QuickAccessAnimations.cardRemove) {
             isDropPlaceholderVisible = false
         }
@@ -712,8 +719,21 @@ final class QuickAccessManager: ObservableObject {
                 size: metrics.panelSize,
                 position: position,
                 activeContentHeight: metrics.activeContentHeight,
-                shadowMargin: metrics.shadowMargin
+                shadowMargin: metrics.shadowMargin,
+                handlesKeyboardShortcuts: presentationStyle == .box,
+                onCancel: { [weak self] in
+                    self?.handlePanelCancel()
+                }
             )
+        }
+    }
+
+    private func handlePanelCancel() {
+        switch presentationStyle {
+        case .box:
+            removeAllItems()
+        case .stack:
+            dismissQuickAccessSurface()
         }
     }
 

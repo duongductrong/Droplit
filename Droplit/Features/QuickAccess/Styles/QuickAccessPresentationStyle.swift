@@ -83,6 +83,7 @@ nonisolated struct QuickAccessPresentationActions {
     let dismissSurface: () -> Void
     let removeItem: (UUID) -> Void
     let removeAllItems: () -> Void
+    let clearItemsKeepingSurfaceVisible: () -> Void
     let openItem: (UUID) -> Void
     let revealOutput: (UUID) -> Void
     let convertItem: (UUID, QuickAccessConversionTarget) -> Void
@@ -135,6 +136,11 @@ extension QuickAccessManager {
             removeAllItems: { [weak self] in
                 Task { @MainActor in
                     self?.removeAllItems()
+                }
+            },
+            clearItemsKeepingSurfaceVisible: { [weak self] in
+                Task { @MainActor in
+                    self?.removeAllItems(keepsSurfaceVisible: true)
                 }
             },
             openItem: { [weak self] id in

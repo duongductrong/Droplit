@@ -2,11 +2,13 @@ import AppKit
 import SwiftUI
 
 @MainActor
-final class QuickAccessPanelController {
+final class QuickAccessPanelController: NSObject, NSWindowDelegate {
     private var panel: QuickAccessPanel?
     private var position: QuickAccessPosition = .bottomRight
     private let padding: CGFloat = 22
     private var isAnimating = false
+    private var isApplyingProgrammaticFrameChange = false
+    private var manualFrameOrigin: NSPoint?
     private var activeContentHeight: CGFloat = 0
     private var shadowMargin: CGFloat = QuickAccessLayout.shadowMargin
 
@@ -21,10 +23,13 @@ final class QuickAccessPanelController {
         size: CGSize,
         position: QuickAccessPosition,
         activeContentHeight: CGFloat,
-        shadowMargin: CGFloat
+        shadowMargin: CGFloat,
+        handlesKeyboardShortcuts: Bool,
+        onCancel: @escaping () -> Void
     ) {
         guard !isAnimating else { return }
         self.position = position
+        self.manualFrameOrigin = nil
         self.activeContentHeight = activeContentHeight
         self.shadowMargin = shadowMargin
 
@@ -40,13 +45,16 @@ final class QuickAccessPanelController {
         let panel = QuickAccessPanel(contentRect: targetFrame)
         let hostingView = NSHostingView(rootView: content)
         hostingView.frame = NSRect(origin: .zero, size: size)
+        panel.delegate = self
+        panel.handlesKeyboardShortcuts = handlesKeyboardShortcuts
+        panel.onEscapeKey = onCancel
         panel.contentView = hostingView
         panel.updatePassthroughRegion(activeContentHeight: activeContentHeight, edge: position.edge)
         self.panel = panel
 
         if reduceMotion {
             panel.alphaValue = 0
-            panel.orderFrontRegardless()
+            present(panel)
             NSAnimationContext.runAnimationGroup { context in
                 context.duration = QuickAccessAnimations.panelExitDuration
                 context.timingFunction = CAMediaTimingFunction(name: .easeOut)
@@ -59,9 +67,11 @@ final class QuickAccessPanelController {
                 padding: padding,
                 shadowMargin: shadowMargin
             )
-            panel.setFrame(NSRect(origin: offscreenOrigin, size: size), display: false)
+            applyProgrammaticFrameChange {
+                panel.setFrame(NSRect(origin: offscreenOrigin, size: size), display: false)
+            }
             panel.alphaValue = 1
-            panel.orderFrontRegardless()
+            present(panel)
 
             isAnimating = true
             NSAnimationContext.runAnimationGroup({ context in
@@ -74,6 +84,7 @@ final class QuickAccessPanelController {
                         activeContentHeight: self?.activeContentHeight ?? 0,
                         edge: self?.position.edge ?? .bottom
                     )
+                    self?.manualFrameOrigin = nil
                     self?.isAnimating = false
                 }
             })
@@ -82,6 +93,7 @@ final class QuickAccessPanelController {
 
     func updatePosition(_ newPosition: QuickAccessPosition) {
         position = newPosition
+        manualFrameOrigin = nil
         panel?.updatePassthroughRegion(activeContentHeight: activeContentHeight, edge: newPosition.edge)
         repositionPanel()
     }
@@ -90,7 +102,7 @@ final class QuickAccessPanelController {
         guard let panel, !isAnimating else { return }
         self.shadowMargin = shadowMargin
         let screen = ScreenUtility.activeScreen()
-        let origin = position.calculateOrigin(
+        let origin = manualFrameOrigin ?? position.calculateOrigin(
             for: size,
             on: screen,
             padding: padding,
@@ -98,7 +110,12 @@ final class QuickAccessPanelController {
         )
         let targetFrame = NSRect(origin: origin, size: size)
         if panel.frame != targetFrame {
-            panel.setFrame(targetFrame, display: true, animate: false)
+            applyProgrammaticFrameChange {
+                panel.setFrame(targetFrame, display: true, animate: false)
+            }
+            if manualFrameOrigin != nil {
+                manualFrameOrigin = panel.frame.origin
+            }
         }
         panel.updatePassthroughRegion(activeContentHeight: activeContentHeight, edge: position.edge)
     }
@@ -117,9 +134,12 @@ final class QuickAccessPanelController {
                 context.timingFunction = CAMediaTimingFunction(name: .easeIn)
                 panel.animator().alphaValue = 0
             }, completionHandler: { [weak self] in
+                panel.delegate = nil
+                panel.onEscapeKey = nil
                 panel.close()
                 MainActor.assumeIsolated {
                     self?.panel = nil
+                    self?.manualFrameOrigin = nil
                 }
             })
         } else {
@@ -138,13 +158,41 @@ final class QuickAccessPanelController {
                 panel.animator().setFrame(NSRect(origin: offscreenOrigin, size: size), display: true)
                 panel.animator().alphaValue = 0.5
             }, completionHandler: { [weak self] in
+                panel.delegate = nil
+                panel.onEscapeKey = nil
                 panel.close()
                 MainActor.assumeIsolated {
                     self?.panel = nil
+                    self?.manualFrameOrigin = nil
                     self?.isAnimating = false
                 }
             })
         }
+    }
+
+    func windowDidMove(_ notification: Notification) {
+        guard let movedPanel = notification.object as? QuickAccessPanel,
+              movedPanel === panel,
+              !isAnimating,
+              !isApplyingProgrammaticFrameChange else {
+            return
+        }
+
+        manualFrameOrigin = movedPanel.frame.origin
+        movedPanel.updatePassthroughRegion(activeContentHeight: activeContentHeight, edge: position.edge)
+    }
+
+    private func present(_ panel: QuickAccessPanel) {
+        panel.orderFrontRegardless()
+        if panel.canBecomeKey {
+            panel.makeKey()
+        }
+    }
+
+    private func applyProgrammaticFrameChange(_ change: () -> Void) {
+        isApplyingProgrammaticFrameChange = true
+        change()
+        isApplyingProgrammaticFrameChange = false
     }
 
     private func repositionPanel() {
@@ -158,15 +206,19 @@ final class QuickAccessPanelController {
         )
 
         if reduceMotion {
-            panel.setFrameOrigin(origin)
+            applyProgrammaticFrameChange {
+                panel.setFrameOrigin(origin)
+            }
             panel.updatePassthroughRegion(activeContentHeight: activeContentHeight, edge: position.edge)
         } else {
+            isApplyingProgrammaticFrameChange = true
             NSAnimationContext.runAnimationGroup({ context in
                 context.duration = 0.25
                 context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
                 panel.animator().setFrameOrigin(origin)
             }, completionHandler: { [weak self] in
                 MainActor.assumeIsolated {
+                    self?.isApplyingProgrammaticFrameChange = false
                     panel.updatePassthroughRegion(
                         activeContentHeight: self?.activeContentHeight ?? 0,
                         edge: self?.position.edge ?? .bottom
