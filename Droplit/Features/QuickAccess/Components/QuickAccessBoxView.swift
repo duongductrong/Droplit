@@ -121,7 +121,7 @@ struct QuickAccessBoxView: View {
                 .help(context.items.isEmpty ? "Close" : "Clear all items")
 
                 Spacer()
-                batchActionButton
+                topRightControl
             }
             .padding(Layout.chromeInset)
 
@@ -131,6 +131,27 @@ struct QuickAccessBoxView: View {
                     .padding(.bottom, Layout.countPillBottomInset)
             }
         }
+    }
+
+    @ViewBuilder
+    private var topRightControl: some View {
+        if activeItemCount > 0 {
+            processingProgressControl
+        } else {
+            batchActionButton
+        }
+    }
+
+    private var processingProgressControl: some View {
+        QuickAccessBoxCircularProgressView(
+            progress: batchProgressFraction,
+            finishedCount: processingProgressFinishedCount,
+            totalCount: processingProgressTotalCount
+        )
+        .help(topRightHelp)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Optimization progress")
+        .accessibilityValue(topRightHelp)
     }
 
     private var batchActionButton: some View {
@@ -235,8 +256,10 @@ struct QuickAccessBoxView: View {
     }
 
     private var topRightHelp: String {
+        if activeItemCount > 0 {
+            return "\(processingProgressFinishedCount) of \(processingProgressTotalCount) finished"
+        }
         if hasStagedItems { return "Choose batch action" }
-        if activeItemCount > 0 { return "\(finishedItemCount) of \(context.items.count) finished" }
         if failedItemCount > 0 { return "\(failedItemCount) failed" }
         if completedItemCount == context.items.count, !context.items.isEmpty { return "All items complete" }
         return "No staged items"
@@ -260,6 +283,46 @@ struct QuickAccessBoxView: View {
 
     private var finishedItemCount: Int {
         completedItemCount + failedItemCount
+    }
+
+    private var processingProgressItems: [QuickAccessItem] {
+        let items = context.items.filter { $0.state != .staged }
+        return items.isEmpty ? context.items : items
+    }
+
+    private var processingProgressFinishedCount: Int {
+        processingProgressItems.filter { $0.state == .completed || $0.state == .failed }.count
+    }
+
+    private var processingProgressTotalCount: Int {
+        processingProgressItems.count
+    }
+
+    private var batchProgressFraction: Double? {
+        guard activeItemCount > 0, !processingProgressItems.isEmpty else { return nil }
+
+        let hasKnownProcessingProgress = processingProgressItems.contains {
+            $0.state == .processing && $0.progress != nil
+        }
+        if !hasKnownProcessingProgress && processingProgressFinishedCount == 0 {
+            return nil
+        }
+
+        let totalProgress = processingProgressItems.reduce(0) { partialResult, item in
+            partialResult + progressContribution(for: item)
+        }
+        return totalProgress / Double(processingProgressItems.count)
+    }
+
+    private func progressContribution(for item: QuickAccessItem) -> Double {
+        switch item.state {
+        case .completed, .failed:
+            return 1
+        case .processing:
+            return min(max(item.progress ?? 0, 0), 1)
+        case .staged, .queued:
+            return 0
+        }
     }
 
     private var completedOutputItems: [QuickAccessItem] {
@@ -357,6 +420,94 @@ struct QuickAccessBoxView: View {
             width: size.width,
             height: size.height
         )
+    }
+}
+
+private struct QuickAccessBoxCircularProgressView: View {
+    let progress: Double?
+    let finishedCount: Int
+    let totalCount: Int
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var indeterminateRotation = 0.0
+
+    private let size: CGFloat = 30
+    private let lineWidth: CGFloat = 2.8
+
+    var body: some View {
+        ZStack {
+            Circle()
+                .fill(Color.white.opacity(0.13))
+
+            Circle()
+                .stroke(
+                    Color.white.opacity(0.18),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+
+            progressRing
+
+            Text(centerText)
+                .font(.system(size: centerText.count > 2 ? 7.5 : 8.5, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.78))
+                .droplitMonospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+                .frame(width: 19)
+        }
+        .frame(width: size, height: size)
+        .contentShape(Circle())
+        .onAppear(perform: startIndeterminateAnimationIfNeeded)
+        .onChange(of: isIndeterminate) { _ in
+            startIndeterminateAnimationIfNeeded()
+        }
+        .animation(.easeInOut(duration: 0.2), value: normalizedProgress)
+    }
+
+    private var progressRing: some View {
+        Circle()
+            .trim(from: trimStart, to: trimEnd)
+            .stroke(
+                Color.white.opacity(0.86),
+                style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+            )
+            .rotationEffect(.degrees(isIndeterminate ? indeterminateRotation : -90))
+            .shadow(color: .white.opacity(0.12), radius: 3, y: 1)
+    }
+
+    private var centerText: String {
+        guard totalCount > 0 else { return "0" }
+        if totalCount < 10 {
+            return "\(finishedCount)/\(totalCount)"
+        }
+        if progress != nil {
+            return "\(Int((normalizedProgress * 100).rounded()))"
+        }
+        return "\(finishedCount)"
+    }
+
+    private var isIndeterminate: Bool {
+        progress == nil
+    }
+
+    private var normalizedProgress: Double {
+        min(max(progress ?? 0, 0), 1)
+    }
+
+    private var trimStart: CGFloat {
+        isIndeterminate ? 0.14 : 0
+    }
+
+    private var trimEnd: CGFloat {
+        isIndeterminate ? 0.72 : CGFloat(max(normalizedProgress, 0.045))
+    }
+
+    private func startIndeterminateAnimationIfNeeded() {
+        guard isIndeterminate, !reduceMotion else { return }
+        indeterminateRotation = 0
+        withAnimation(.linear(duration: 1.05).repeatForever(autoreverses: false)) {
+            indeterminateRotation = 360
+        }
     }
 }
 
