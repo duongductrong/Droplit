@@ -14,6 +14,9 @@ private enum DroplitSettingsMetrics {
     static let groupContentTitlePadding: CGFloat = 8
     static let trailingColumnWidth: CGFloat = 180
     static let pickerWidth: CGFloat = 180
+    static let switchScale: CGFloat = 0.82
+    static let switchWidth: CGFloat = 42
+    static let switchHeight: CGFloat = 22
 }
 
 struct DroplitSettingsPage<Content: View>: View {
@@ -170,6 +173,29 @@ struct DroplitSettingsMenuPicker<SelectionValue: Hashable, Content: View>: View 
         .labelsHidden()
         .pickerStyle(.menu)
         .frame(width: width, alignment: .trailing)
+    }
+}
+
+struct DroplitSettingsSwitch: View {
+    let title: String
+    @Binding private var isOn: Bool
+
+    init(_ title: String, isOn: Binding<Bool>) {
+        self.title = title
+        self._isOn = isOn
+    }
+
+    var body: some View {
+        Toggle(title, isOn: $isOn)
+            .labelsHidden()
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .scaleEffect(DroplitSettingsMetrics.switchScale, anchor: .trailing)
+            .frame(
+                width: DroplitSettingsMetrics.switchWidth,
+                height: DroplitSettingsMetrics.switchHeight,
+                alignment: .trailing
+            )
     }
 }
 

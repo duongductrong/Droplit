@@ -95,9 +95,10 @@ struct QuickAccessSettingsView: View {
                     title: "Auto Copy Result",
                     subtitle: "Copy the optimized file to the clipboard when processing finishes"
                 ) {
-                    Toggle("", isOn: $quickAccess.autoCopyOptimizedOutputToClipboard)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
+                    DroplitSettingsSwitch(
+                        "Auto Copy Result",
+                        isOn: $quickAccess.autoCopyOptimizedOutputToClipboard
+                    )
                 }
             }
 

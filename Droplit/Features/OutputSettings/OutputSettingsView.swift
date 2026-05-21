@@ -20,9 +20,7 @@ struct OutputSettingsView: View {
                     title: "Save Location",
                     subtitle: saveLocationEnabled ? "Keep optimized files in a selected folder" : "Use app-managed temporary storage"
                 ) {
-                    Toggle("", isOn: saveLocationBinding)
-                        .labelsHidden()
-                        .toggleStyle(.switch)
+                    DroplitSettingsSwitch("Save Location", isOn: saveLocationBinding)
                 }
 
                 DroplitSettingsDivider()
