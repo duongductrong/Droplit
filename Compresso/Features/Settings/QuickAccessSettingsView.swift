@@ -9,104 +9,134 @@ struct QuickAccessSettingsView: View {
             subtitle: "Control how the floating optimization card appears while you drag media around your Mac."
         ) {
             CompressoSettingsGroup(
-                "Activation",
-                description: "Choose how Quick Access appears and where it anchors on screen."
+                "Quick Access Control",
+                description: "Enable/disable the Quick Access feature globally or sync it with workspace drops."
             ) {
                 CompressoSettingsControlRow(
-                    title: "Trigger",
-                    subtitle: "Choose the gesture that reveals Quick Access"
-                ) {
-                    CompressoSettingsMenuPicker(selection: $quickAccess.triggerInteraction) {
-                        ForEach(QuickAccessTriggerInteraction.allCases) { interaction in
-                            Text(interaction.displayName)
-                                .tag(interaction)
-                        }
-                    }
-                }
-
-                if quickAccess.triggerInteraction == .hold {
-                    CompressoSettingsDivider()
-                    CompressoSettingsControlRow(
-                        title: "Hold Delay",
-                        subtitle: holdTriggerDurationText
-                    ) {
-                        holdDelayStepper
-                    }
-                }
-
-                CompressoSettingsDivider()
-                CompressoSettingsControlRow(
-                    title: "Edge",
-                    subtitle: "Where the panel attaches"
-                ) {
-                    CompressoSettingsMenuPicker(selection: quickAccessEdgeBinding) {
-                        ForEach(QuickAccessPanelEdge.allCases) { edge in
-                            Text(edge.displayName)
-                                .tag(edge)
-                        }
-                    }
-                }
-
-                CompressoSettingsDivider()
-                CompressoSettingsControlRow(
-                    title: "Alignment",
-                    subtitle: "Horizontal placement on the selected edge"
-                ) {
-                    CompressoSettingsMenuPicker(selection: quickAccessAlignmentBinding) {
-                        ForEach(QuickAccessPanelAlignment.allCases) { alignment in
-                            Text(alignment.displayName)
-                                .tag(alignment)
-                        }
-                    }
-                }
-            }
-
-            CompressoSettingsGroup(
-                "After Processing",
-                description: "Choose what happens after a Quick Access job finishes."
-            ) {
-                CompressoSettingsControlRow(
-                    title: "Show Result Card",
-                    subtitle: "Completed card visibility"
-                ) {
-                    CompressoSettingsMenuPicker(selection: $quickAccess.completedCardDisplayDuration) {
-                        ForEach(QuickAccessCompletedCardDisplayDuration.allCases) { duration in
-                            Text(duration.displayName)
-                                .tag(duration)
-                        }
-                    }
-                }
-
-                CompressoSettingsDivider()
-                CompressoSettingsControlRow(
-                    title: "Auto Copy Result",
-                    subtitle: "Copy the optimized file to the clipboard when processing finishes"
+                    title: "Enable Quick Access",
+                    subtitle: "Allows summoning the floating panel by shaking/holding cursor while dragging files"
                 ) {
                     CompressoSettingsSwitch(
-                        "Auto Copy Result",
-                        isOn: $quickAccess.autoCopyOptimizedOutputToClipboard
+                        "Enable Quick Access",
+                        isOn: $quickAccess.isQuickAccessEnabled
                     )
+                }
+
+                if quickAccess.isQuickAccessEnabled {
+                    CompressoSettingsDivider()
+                    CompressoSettingsControlRow(
+                        title: "Show for Workspace Drops",
+                        subtitle: "Show the floating card when dropping files directly into the main window"
+                    ) {
+                        CompressoSettingsSwitch(
+                            "Show for Workspace Drops",
+                            isOn: $quickAccess.showPanelForWorkspaceJobs
+                        )
+                    }
                 }
             }
 
-            CompressoSettingsGroup(
-                "Capacity",
-                description: "Control optimization throughput and preview the floating Quick Access surface."
-            ) {
-                CompressoSettingsControlRow(
-                    title: "Concurrent Jobs",
-                    subtitle: "\(quickAccess.processingCount) running, \(quickAccess.queuedCount) queued"
+            if quickAccess.isQuickAccessEnabled {
+                CompressoSettingsGroup(
+                    "Activation",
+                    description: "Choose how Quick Access appears and where it anchors on screen."
                 ) {
-                    concurrencyStepper
+                    CompressoSettingsControlRow(
+                        title: "Trigger",
+                        subtitle: "Choose the gesture that reveals Quick Access"
+                    ) {
+                        CompressoSettingsMenuPicker(selection: $quickAccess.triggerInteraction) {
+                            ForEach(QuickAccessTriggerInteraction.allCases) { interaction in
+                                Text(interaction.displayName)
+                                    .tag(interaction)
+                            }
+                        }
+                    }
+
+                    if quickAccess.triggerInteraction == .hold {
+                        CompressoSettingsDivider()
+                        CompressoSettingsControlRow(
+                            title: "Hold Delay",
+                            subtitle: holdTriggerDurationText
+                        ) {
+                            holdDelayStepper
+                        }
+                    }
+
+                    CompressoSettingsDivider()
+                    CompressoSettingsControlRow(
+                        title: "Edge",
+                        subtitle: "Where the panel attaches"
+                    ) {
+                        CompressoSettingsMenuPicker(selection: quickAccessEdgeBinding) {
+                            ForEach(QuickAccessPanelEdge.allCases) { edge in
+                                Text(edge.displayName)
+                                    .tag(edge)
+                            }
+                        }
+                    }
+
+                    CompressoSettingsDivider()
+                    CompressoSettingsControlRow(
+                        title: "Alignment",
+                        subtitle: "Horizontal placement on the selected edge"
+                    ) {
+                        CompressoSettingsMenuPicker(selection: quickAccessAlignmentBinding) {
+                            ForEach(QuickAccessPanelAlignment.allCases) { alignment in
+                                Text(alignment.displayName)
+                                    .tag(alignment)
+                            }
+                        }
+                    }
                 }
 
-                CompressoSettingsDivider()
-                CompressoSettingsControlRow(
-                    title: "Preview",
-                    subtitle: "Show the floating Quick Access card on screen"
+                CompressoSettingsGroup(
+                    "After Processing",
+                    description: "Choose what happens after a Quick Access job finishes."
                 ) {
-                    Button("Show Preview") {
-                        quickAccess.showDropPlaceholder()
+                    CompressoSettingsControlRow(
+                        title: "Show Result Card",
+                        subtitle: "Completed card visibility"
+                    ) {
+                        CompressoSettingsMenuPicker(selection: $quickAccess.completedCardDisplayDuration) {
+                            ForEach(QuickAccessCompletedCardDisplayDuration.allCases) { duration in
+                                Text(duration.displayName)
+                                    .tag(duration)
+                            }
+                        }
+                    }
+
+                    CompressoSettingsDivider()
+                    CompressoSettingsControlRow(
+                        title: "Auto Copy Result",
+                        subtitle: "Copy the optimized file to the clipboard when processing finishes"
+                    ) {
+                        CompressoSettingsSwitch(
+                            "Auto Copy Result",
+                            isOn: $quickAccess.autoCopyOptimizedOutputToClipboard
+                        )
+                    }
+                }
+
+                CompressoSettingsGroup(
+                    "Capacity",
+                    description: "Control optimization throughput and preview the floating Quick Access surface."
+                ) {
+                    CompressoSettingsControlRow(
+                        title: "Concurrent Jobs",
+                        subtitle: "\(quickAccess.processingCount) running, \(quickAccess.queuedCount) queued"
+                    ) {
+                        concurrencyStepper
+                    }
+
+                    CompressoSettingsDivider()
+                    CompressoSettingsControlRow(
+                        title: "Preview",
+                        subtitle: "Show the floating Quick Access card on screen"
+                    ) {
+                        Button("Show Preview") {
+                            quickAccess.showDropPlaceholder()
+                        }
                     }
                 }
             }

@@ -336,6 +336,11 @@ nonisolated enum QuickAccessLayout {
     }
 }
 
+nonisolated enum QuickAccessJobSource: String, Codable {
+    case quickAccess
+    case workspace
+}
+
 nonisolated enum QuickAccessJobState: Equatable {
     case staged
     case queued
@@ -498,6 +503,7 @@ nonisolated struct QuickAccessItem: Identifiable {
     var failureMessage: String?
     var activeOperationName: String
     var activeConversionTarget: QuickAccessConversionTarget?
+    let source: QuickAccessJobSource
 
     init(
         sourceURL: URL,
@@ -506,7 +512,8 @@ nonisolated struct QuickAccessItem: Identifiable {
         originalBytes: Int64,
         mediaDuration: TimeInterval?,
         pixelSize: CGSize?,
-        state: QuickAccessJobState = .queued
+        state: QuickAccessJobState = .queued,
+        source: QuickAccessJobSource = .quickAccess
     ) {
         self.id = UUID()
         self.sourceURL = sourceURL
@@ -524,6 +531,7 @@ nonisolated struct QuickAccessItem: Identifiable {
         self.failureMessage = nil
         self.activeOperationName = "Optimizing"
         self.activeConversionTarget = QuickAccessConversionTarget.sourceTarget(for: sourceURL, kind: kind)
+        self.source = source
     }
 
     var originalSizeText: String {

@@ -43,13 +43,17 @@ private struct WindowChromeConfigurator: NSViewRepresentable {
     private func configureWindow(for view: NSView) {
         DispatchQueue.main.async {
             guard let window = view.window else { return }
+            window.isOpaque = false
+            window.backgroundColor = .clear
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.styleMask.insert(.fullSizeContentView)
-            window.minSize = NSSize(width: 720, height: 520)
-            window.standardWindowButton(.closeButton)?.isHidden = true
-            window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-            window.standardWindowButton(.zoomButton)?.isHidden = true
+            window.minSize = NSSize(width: 800, height: 560)
+            
+            let isOnboardingComplete = UserDefaults.standard.bool(forKey: "onboarding.isComplete")
+            window.standardWindowButton(.closeButton)?.isHidden = !isOnboardingComplete
+            window.standardWindowButton(.miniaturizeButton)?.isHidden = !isOnboardingComplete
+            window.standardWindowButton(.zoomButton)?.isHidden = !isOnboardingComplete
         }
     }
 }

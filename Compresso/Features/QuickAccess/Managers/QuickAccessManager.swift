@@ -45,13 +45,53 @@ final class QuickAccessManager: ObservableObject {
         }
     }
 
+    @Published var isQuickAccessEnabled = true {
+        didSet {
+            guard isQuickAccessEnabled != oldValue else { return }
+            UserDefaults.standard.set(isQuickAccessEnabled, forKey: Keys.isQuickAccessEnabled)
+            if isQuickAccessEnabled {
+                start()
+            } else {
+                stop()
+            }
+        }
+    }
+
+    @Published var showPanelForWorkspaceJobs = false {
+        didSet {
+            guard showPanelForWorkspaceJobs != oldValue else { return }
+            UserDefaults.standard.set(showPanelForWorkspaceJobs, forKey: Keys.showPanelForWorkspaceJobs)
+            refreshPanel()
+        }
+    }
+
     var queuedCount: Int {
         items.filter { $0.state == .queued }.count
     }
 
-
     var processingCount: Int {
         items.filter { $0.state == .processing }.count
+    }
+
+    var stagedCount: Int {
+        items.filter { $0.state == .staged }.count
+    }
+
+    func startStagedJobs() {
+        var updated = false
+        for index in items.indices {
+            if items[index].state == .staged {
+                items[index].state = .queued
+                updated = true
+            }
+        }
+        if updated {
+            schedulePendingJobs()
+        }
+    }
+
+    func stageDroppedURLs(_ urls: [URL]) {
+        ingestDroppedURLs(urls, initialState: .staged, startsAutomatically: false, source: .workspace)
     }
 
     private enum Keys {
@@ -61,6 +101,8 @@ final class QuickAccessManager: ObservableObject {
         static let maximumConcurrentOptimizations = "quickAccess.maximumConcurrentOptimizations"
         static let completedCardDisplayDuration = "quickAccess.completedCardDisplayDuration"
         static let autoCopyOptimizedOutputToClipboard = "quickAccess.autoCopyOptimizedOutputToClipboard"
+        static let isQuickAccessEnabled = "quickAccess.enabled"
+        static let showPanelForWorkspaceJobs = "quickAccess.showPanelForWorkspaceJobs"
     }
 
     private static let allowedConcurrencyRange = 1...12
@@ -115,9 +157,16 @@ final class QuickAccessManager: ObservableObject {
         autoCopyOptimizedOutputToClipboard = UserDefaults.standard.bool(
             forKey: Keys.autoCopyOptimizedOutputToClipboard
         )
+        if UserDefaults.standard.object(forKey: Keys.isQuickAccessEnabled) != nil {
+            isQuickAccessEnabled = UserDefaults.standard.bool(forKey: Keys.isQuickAccessEnabled)
+        } else {
+            isQuickAccessEnabled = true
+        }
+        showPanelForWorkspaceJobs = UserDefaults.standard.bool(forKey: Keys.showPanelForWorkspaceJobs)
     }
 
     func start() {
+        guard isQuickAccessEnabled else { return }
         guard localMonitor == nil, globalMonitor == nil else { return }
 
         localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDragged, .rightMouseDragged]) { [weak self] event in
@@ -207,14 +256,15 @@ final class QuickAccessManager: ObservableObject {
     }
 
     func ingestDroppedURLs(_ urls: [URL]) {
-        ingestDroppedURLs(urls, initialState: .queued, startsAutomatically: true)
+        ingestDroppedURLs(urls, initialState: .queued, startsAutomatically: true, source: .quickAccess)
     }
 
 
     private func ingestDroppedURLs(
         _ urls: [URL],
         initialState: QuickAccessJobState,
-        startsAutomatically: Bool
+        startsAutomatically: Bool,
+        source: QuickAccessJobSource
     ) {
         let supported = urls.filter { QuickAccessFileKind.detect(from: $0).isSupported }
         guard !supported.isEmpty else { return }
@@ -229,7 +279,8 @@ final class QuickAccessManager: ObservableObject {
                 await self?.addOptimizationJob(
                     for: url,
                     initialState: initialState,
-                    startsAutomatically: startsAutomatically
+                    startsAutomatically: startsAutomatically,
+                    source: source
                 )
             }
         }
@@ -448,7 +499,8 @@ final class QuickAccessManager: ObservableObject {
     private func addOptimizationJob(
         for url: URL,
         initialState: QuickAccessJobState,
-        startsAutomatically: Bool
+        startsAutomatically: Bool,
+        source: QuickAccessJobSource
     ) async {
         let kind = QuickAccessFileKind.detect(from: url)
         let originalBytes = fileSize(at: url)
@@ -460,7 +512,8 @@ final class QuickAccessManager: ObservableObject {
             originalBytes: originalBytes,
             mediaDuration: nil,
             pixelSize: nil,
-            state: initialState
+            state: initialState,
+            source: source
         )
         let itemID = item.id
 
@@ -576,6 +629,11 @@ final class QuickAccessManager: ObservableObject {
 
     private func scheduleCompletedDismiss(for id: UUID) {
         completedDismissTasks[id]?.cancel()
+        guard let item = items.first(where: { $0.id == id }),
+              item.source != .workspace else {
+            completedDismissTasks[id] = nil
+            return
+        }
         guard let timeout = completedCardDisplayDuration.timeoutNanoseconds else {
             completedDismissTasks[id] = nil
             return
@@ -657,6 +715,11 @@ final class QuickAccessManager: ObservableObject {
     }
 
     private func refreshPanel() {
+        guard isQuickAccessEnabled else {
+            panelController.hide()
+            return
+        }
+
         let metrics = presentationMetrics
         if metrics.visibleElementCount == 0 {
             panelController.hide()

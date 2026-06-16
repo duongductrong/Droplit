@@ -58,7 +58,7 @@ private func runQuickAccessPresentationAction(_ action: @escaping @MainActor () 
 extension QuickAccessManager {
     var presentationContext: QuickAccessPresentationContext {
         QuickAccessPresentationContext(
-            items: items,
+            items: showPanelForWorkspaceJobs ? items : items.filter { $0.source == .quickAccess },
             isDropPlaceholderVisible: isDropPlaceholderVisible,
             pendingDropSummary: pendingDropSummary,
             position: position

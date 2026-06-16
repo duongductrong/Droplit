@@ -149,13 +149,14 @@ nonisolated enum OptimizationService {
 
     private static func runPNGQuant(sourceURL: URL, outputURL: URL) throws {
         let executable = try requiredExecutable("pngquant")
+        let qualityRange = OptimizationQualitySettings.pngQualityRange
         do {
             try run(
                 executable,
                 arguments: [
                     "--force",
                     "--skip-if-larger",
-                    "--quality", "65-95",
+                    "--quality", qualityRange,
                     "--output", outputURL.path,
                     sourceURL.path
                 ]
@@ -173,12 +174,13 @@ nonisolated enum OptimizationService {
 
     private static func runJPEGOptim(sourceURL: URL, outputURL: URL) throws {
         let executable = try requiredExecutable("jpegoptim")
+        let maxQuality = OptimizationQualitySettings.imageQuality
         try FileManager.default.copyItem(at: sourceURL, to: outputURL)
         try run(
             executable,
             arguments: [
                 "--strip-all",
-                "--max=85",
+                "--max=\(maxQuality)",
                 outputURL.path
             ]
         )
@@ -199,6 +201,7 @@ nonisolated enum OptimizationService {
 
     private static func runFFmpeg(sourceURL: URL, outputURL: URL) throws {
         let executable = try requiredExecutable("ffmpeg")
+        let crf = OptimizationQualitySettings.videoQuality
         try run(
             executable,
             arguments: [
@@ -207,7 +210,7 @@ nonisolated enum OptimizationService {
                 "-map_metadata", "-1",
                 "-c:v", "libx264",
                 "-preset", "medium",
-                "-crf", "28",
+                "-crf", "\(crf)",
                 "-c:a", "aac",
                 "-b:a", "128k",
                 outputURL.path
@@ -280,7 +283,8 @@ nonisolated enum OptimizationService {
 
         switch target {
         case .webp:
-            outputPath = "\(outputURL.path)[Q=92]"
+            let webpQ = OptimizationQualitySettings.imageQuality
+            outputPath = "\(outputURL.path)[Q=\(webpQ)]"
         case .png, .jpeg, .heic, .gif, .mov, .mp4:
             outputPath = outputURL.path
         }
@@ -322,7 +326,7 @@ nonisolated enum OptimizationService {
                     arguments: [
                         "--fps", "15",
                         "--width", "720",
-                        "--quality", "82",
+                        "--quality", "\(OptimizationQualitySettings.imageQuality)",
                         "--output", outputURL.path,
                         sourceURL.path
                     ]
