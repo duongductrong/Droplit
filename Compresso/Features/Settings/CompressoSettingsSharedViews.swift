@@ -179,6 +179,7 @@ struct CompressoSettingsMenuPicker<SelectionValue: Hashable, Content: View>: Vie
 struct CompressoSettingsSwitch: View {
     let title: String
     @Binding private var isOn: Bool
+    @State private var isHovering = false
 
     init(_ title: String, isOn: Binding<Bool>) {
         self.title = title
@@ -186,16 +187,34 @@ struct CompressoSettingsSwitch: View {
     }
 
     var body: some View {
-        Toggle(title, isOn: $isOn)
-            .labelsHidden()
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .scaleEffect(CompressoSettingsMetrics.switchScale, anchor: .trailing)
-            .frame(
-                width: CompressoSettingsMetrics.switchWidth,
-                height: CompressoSettingsMetrics.switchHeight,
-                alignment: .trailing
-            )
+        Button(action: {
+            withAnimation(.spring(response: 0.22, dampingFraction: 0.72)) {
+                isOn.toggle()
+            }
+        }) {
+            ZStack(alignment: isOn ? .trailing : .leading) {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(isOn ? Color.accentColor : (isHovering ? Color.primary.opacity(0.16) : Color.primary.opacity(0.12)))
+                    .frame(width: 36, height: 20)
+                
+                Circle()
+                    .fill(Color.white)
+                    .shadow(color: .black.opacity(0.15), radius: 1, x: 0, y: 1)
+                    .frame(width: 16, height: 16)
+                    .padding(.horizontal, 2)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(title)
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .frame(
+            width: CompressoSettingsMetrics.switchWidth,
+            height: CompressoSettingsMetrics.switchHeight,
+            alignment: .trailing
+        )
     }
 }
 

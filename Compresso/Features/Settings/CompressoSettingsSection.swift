@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct CompressoSettingsSidebarGroup: Identifiable {
     let title: String
@@ -59,6 +60,21 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
         case .concurrency: "bolt.horizontal.circle.fill"
         case .storage: "internaldrive.fill"
         case .about: "info.circle.fill"
+        }
+    }
+
+    var iconColor: Color {
+        switch self {
+        case .general, .about:
+            return Color.blue
+        case .quickAccess, .concurrency:
+            return Color.purple
+        case .output, .conversion, .storage:
+            return Color.green
+        case .tools:
+            return Color.orange
+        case .queue:
+            return Color.pink
         }
     }
 

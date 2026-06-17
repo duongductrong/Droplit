@@ -8,6 +8,7 @@ enum CompressoSettingsSidebarMetrics {
 struct CompressoSettingsSidebarView: View {
     @Binding var selection: CompressoSettingsSection?
     @Binding var searchText: String
+    let showChrome: Bool
     let toggleSidebar: () -> Void
 
     var body: some View {
@@ -46,11 +47,13 @@ struct CompressoSettingsSidebarView: View {
 
     private var sidebarHeader: some View {
         VStack(spacing: 12) {
-            sidebarChrome
+            if showChrome {
+                sidebarChrome
+            }
 
             sidebarSearchField
         }
-        .padding(.top, 18)
+        .padding(.top, showChrome ? 18 : 52)
         .padding(.bottom, 12)
     }
 
@@ -60,14 +63,7 @@ struct CompressoSettingsSidebarView: View {
 
             Spacer(minLength: 12)
 
-            Button(action: toggleSidebar) {
-                Image(systemName: "sidebar.left")
-                    .compressoHierarchicalSymbolRendering()
-                    .font(.system(size: 15, weight: .semibold))
-                    .frame(width: 28, height: 28)
-            }
-            .buttonStyle(.borderless)
-            .help("Toggle Sidebar")
+            CompressoSidebarToggleButton(action: toggleSidebar)
         }
         .frame(height: 24)
         .padding(.leading, 18)
@@ -76,7 +72,6 @@ struct CompressoSettingsSidebarView: View {
 
     private var sidebarSearchField: some View {
         CompressoSidebarSearchField(text: $searchText)
-            .frame(height: 38)
             .padding(.horizontal, 16)
     }
 
@@ -119,29 +114,31 @@ struct CompressoSettingsSidebarView: View {
     }
 
     private func sidebarRow(_ section: CompressoSettingsSection) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: section.systemImage)
-                .foregroundColor(.secondary)
-                .frame(width: 16)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(section.title)
-                    .lineLimit(1)
-
-                Text(section.subtitle)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
+        HStack(spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(section.iconColor)
+                    .frame(width: 24, height: 24)
+                
+                Image(systemName: section.systemImage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
             }
+
+            Text(section.title)
+                .font(.system(size: 13, weight: .medium))
+                .foregroundColor(.primary)
+                .lineLimit(1)
 
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
     }
 }
 
 struct CompressoTrafficLightsView: View {
     @State private var isHovering = false
+    @Environment(\.controlActiveState) var controlActiveState
 
     var body: some View {
         HStack(spacing: 8) {
@@ -162,13 +159,16 @@ struct CompressoTrafficLightsView: View {
     }
 
     private func trafficLight(color: Color, symbol: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
+        let isWindowActive = controlActiveState != .inactive
+        let lightColor = isWindowActive ? color : Color.secondary.opacity(0.24)
+        
+        return Button(action: action) {
             Circle()
-                .fill(color)
-                .frame(width: 13, height: 13)
+                .fill(lightColor)
+                .frame(width: 12, height: 12)
                 .overlay(
                     Group {
-                        if isHovering {
+                        if isHovering && isWindowActive {
                             Image(systemName: symbol)
                                 .font(.system(size: 7, weight: .bold))
                                 .foregroundColor(.black.opacity(0.55))
@@ -177,7 +177,7 @@ struct CompressoTrafficLightsView: View {
                 )
                 .overlay(
                     Circle()
-                        .stroke(.black.opacity(0.16), lineWidth: 0.5)
+                        .stroke(Color.black.opacity(isWindowActive ? 0.16 : 0.08), lineWidth: 0.5)
                 )
         }
         .buttonStyle(.plain)
@@ -188,62 +188,71 @@ struct CompressoTrafficLightsView: View {
     }
 }
 
-private struct CompressoSidebarSearchField: NSViewRepresentable {
+struct CompressoSidebarSearchField: View {
     @Binding var text: String
-    private let searchFieldHeight: CGFloat = 34
+    @State private var isFocused = false
+    @State private var isHovering = false
 
-    func makeNSView(context: Context) -> NSView {
-        let container = NSView()
-        let searchField = NSSearchField()
-        searchField.delegate = context.coordinator
-        searchField.placeholderString = "Search Settings"
-        searchField.sendsSearchStringImmediately = true
-        searchField.sendsWholeSearchString = false
-        searchField.controlSize = .large
-        searchField.bezelStyle = .roundedBezel
-        searchField.focusRingType = .default
-        searchField.setContentHuggingPriority(.defaultLow, for: .horizontal)
-        searchField.translatesAutoresizingMaskIntoConstraints = false
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+                .font(.system(size: 11, weight: .medium))
 
-        container.addSubview(searchField)
-        NSLayoutConstraint.activate([
-            searchField.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            searchField.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            searchField.centerYAnchor.constraint(equalTo: container.centerYAnchor),
-            searchField.heightAnchor.constraint(equalToConstant: searchFieldHeight)
-        ])
+            TextField("Search Settings", text: $text, onEditingChanged: { editing in
+                isFocused = editing
+            })
+            .textFieldStyle(.plain)
+            .font(.system(size: 12))
 
-        context.coordinator.searchField = searchField
-        return container
-    }
-
-    func updateNSView(_ container: NSView, context: Context) {
-        guard let searchField = context.coordinator.searchField else {
-            return
-        }
-
-        if searchField.stringValue != text {
-            searchField.stringValue = text
-        }
-    }
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(text: $text)
-    }
-
-    final class Coordinator: NSObject, NSSearchFieldDelegate {
-        private let text: Binding<String>
-        weak var searchField: NSSearchField?
-
-        init(text: Binding<String>) {
-            self.text = text
-        }
-
-        func controlTextDidChange(_ notification: Notification) {
-            guard let searchField = notification.object as? NSSearchField else {
-                return
+            if !text.isEmpty {
+                Button(action: { text = "" }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary.opacity(0.8))
+                        .font(.system(size: 12))
+                }
+                .buttonStyle(.plain)
             }
-            text.wrappedValue = searchField.stringValue
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .fill(Color.primary.opacity(isFocused ? 0.08 : (isHovering ? 0.05 : 0.03)))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                .stroke(isFocused ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.05), lineWidth: 0.8)
+        )
+        .onHover { hovering in
+            isHovering = hovering
+        }
+        .animation(.easeOut(duration: 0.12), value: isFocused)
+        .animation(.easeOut(duration: 0.12), value: isHovering)
+    }
+}
+
+struct CompressoSidebarToggleButton: View {
+    let action: () -> Void
+    @State private var isHovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "sidebar.left")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(.primary.opacity(0.85))
+                .frame(width: 28, height: 28)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(isHovering ? Color.primary.opacity(0.08) : Color.clear)
+                )
+        }
+        .buttonStyle(.plain)
+        .help("Toggle Sidebar")
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) {
+                isHovering = hovering
+            }
         }
     }
 }

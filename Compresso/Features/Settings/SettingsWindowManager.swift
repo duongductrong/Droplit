@@ -31,10 +31,10 @@ final class SettingsWindowManager: NSObject, NSWindowDelegate {
         window.delegate = self
         window.isReleasedWhenClosed = false
 
-        // Standard traffic lights will be hidden since the settings sidebar/roots render their own CompressoTrafficLightsView()
-        window.standardWindowButton(.closeButton)?.isHidden = true
-        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
-        window.standardWindowButton(.zoomButton)?.isHidden = true
+        // Standard traffic lights will be visible and fully functional
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+        window.standardWindowButton(.zoomButton)?.isHidden = false
 
         window.center()
         window.makeKeyAndOrderFront(nil)

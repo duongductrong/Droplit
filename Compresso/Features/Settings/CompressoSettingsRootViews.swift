@@ -21,6 +21,7 @@ struct CompressoModernSettingsRoot: View {
             CompressoSettingsSidebarView(
                 selection: $selectedSection,
                 searchText: $searchText,
+                showChrome: false,
                 toggleSidebar: toggleSidebar
             )
         } detail: {
@@ -32,45 +33,17 @@ struct CompressoModernSettingsRoot: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
         .navigationSplitViewStyle(.balanced)
-        .overlay(alignment: .topLeading) {
-            if columnVisibility == .detailOnly {
-                collapsedSidebarChromeOverlay
+        .background(
+            Button(action: toggleSidebar) {
+                EmptyView()
             }
-        }
+            .keyboardShortcut("b", modifiers: .command)
+        )
     }
 
     private func toggleSidebar() {
         withAnimation(.easeInOut(duration: 0.18)) {
             columnVisibility = columnVisibility == .detailOnly ? .all : .detailOnly
-        }
-    }
-
-    private var sidebarToggleButton: some View {
-        Button(action: toggleSidebar) {
-            Image(systemName: "sidebar.left")
-                .compressoHierarchicalSymbolRendering()
-                .font(.system(size: 15, weight: .semibold))
-                .frame(width: 28, height: 28)
-        }
-        .buttonStyle(.borderless)
-        .help("Toggle Sidebar")
-    }
-
-    private var collapsedSidebarChrome: some View {
-        HStack(spacing: 16) {
-            CompressoTrafficLightsView()
-
-            sidebarToggleButton
-        }
-    }
-
-    private var collapsedSidebarChromeOverlay: some View {
-        GeometryReader { proxy in
-            collapsedSidebarChrome
-                .padding(.top, 16)
-                .padding(.leading, 18)
-                .offset(y: -proxy.safeAreaInsets.top)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 }
@@ -90,6 +63,7 @@ struct CompressoLegacySettingsRoot: View {
                     CompressoSettingsSidebarView(
                         selection: $selectedSection,
                         searchText: $searchText,
+                        showChrome: true,
                         toggleSidebar: toggleSidebar
                     )
                     .frame(width: CompressoSettingsSidebarMetrics.width)
@@ -111,6 +85,12 @@ struct CompressoLegacySettingsRoot: View {
                     .padding(.leading, 18)
             }
         }
+        .background(
+            Button(action: toggleSidebar) {
+                EmptyView()
+            }
+            .keyboardShortcut("b", modifiers: .command)
+        )
     }
 
     private func toggleSidebar() {
@@ -120,14 +100,7 @@ struct CompressoLegacySettingsRoot: View {
     }
 
     private var sidebarToggleButton: some View {
-        Button(action: toggleSidebar) {
-            Image(systemName: "sidebar.left")
-                .compressoHierarchicalSymbolRendering()
-                .font(.system(size: 15, weight: .semibold))
-                .frame(width: 28, height: 28)
-        }
-        .buttonStyle(.borderless)
-        .help("Toggle Sidebar")
+        CompressoSidebarToggleButton(action: toggleSidebar)
     }
 
     private var collapsedSidebarChrome: some View {
