@@ -182,7 +182,48 @@ struct ContentView: View {
                 populatedFileList
             }
         }
+        .overlay(
+            floatingViewStylePicker
+                .padding(.top, 12)
+                .padding(.trailing, 16),
+            alignment: .topTrailing
+        )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var floatingViewStylePicker: some View {
+        HStack(spacing: 2) {
+            ForEach(CompressoWorkspaceViewStyle.allCases) { style in
+                Button {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) {
+                        viewStyle = style
+                        CompressoWorkspaceViewStyle.current = style
+                    }
+                } label: {
+                    Image(systemName: style.systemImage)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(viewStyle == style ? .primary : .secondary.opacity(0.85))
+                        .frame(width: 26, height: 22)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .fill(viewStyle == style ? Color.primary.opacity(0.12) : Color.clear)
+                        )
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help(style.displayName + " View")
+            }
+        }
+        .padding(3)
+        .background(
+            VisualEffectView(material: .titlebar, blendingMode: .withinWindow)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 3, y: 1.5)
     }
 
     private var emptyDropZone: some View {
@@ -443,21 +484,6 @@ struct ContentView: View {
             sectionLabel("Output")
 
             VStack(alignment: .leading, spacing: 8) {
-                configRow(title: "View Style") {
-                    Picker("", selection: $viewStyle) {
-                        ForEach(CompressoWorkspaceViewStyle.allCases) { style in
-                            Label(style.displayName, systemImage: style.systemImage)
-                                .tag(style)
-                        }
-                    }
-                    .labelsHidden()
-                    .pickerStyle(.segmented)
-                    .frame(width: 130, alignment: .trailing)
-                    .onChange(of: viewStyle) { newValue in
-                        CompressoWorkspaceViewStyle.current = newValue
-                    }
-                }
-
                 configRow(title: "Save Mode") {
                     Picker("", selection: $optimizationOutputMode) {
                         Text("Replace Original").tag(ConversionOutputMode.replace)
