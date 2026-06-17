@@ -748,8 +748,12 @@ final class QuickAccessManager: ObservableObject {
     }
 
     private func fileSize(at url: URL) -> Int64 {
-        let values = try? url.resourceValues(forKeys: [.fileSizeKey])
-        return Int64(values?.fileSize ?? 0)
+        do {
+            let attrs = try FileManager.default.attributesOfItem(atPath: url.path)
+            return attrs[.size] as? Int64 ?? 0
+        } catch {
+            return 0
+        }
     }
 
     private static func clampConcurrency(_ value: Int) -> Int {

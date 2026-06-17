@@ -63,6 +63,7 @@ private enum CompressoWorkspaceMetrics {
 
 struct ContentView: View {
     @ObservedObject private var quickAccess = QuickAccessManager.shared
+    @AppStorage("workspace.isSidebarCollapsed") private var isSidebarCollapsed = false
     @State private var viewStyle: CompressoWorkspaceViewStyle = .current
     @State private var imageQuality: Double = Double(OptimizationQualitySettings.imageQuality)
     @State private var videoQuality: Double = Double(OptimizationQualitySettings.videoQuality)
@@ -81,13 +82,17 @@ struct ContentView: View {
             dropZonePane
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
-            Rectangle()
-                .fill(Color(NSColor.separatorColor))
-                .frame(width: 1)
-                .ignoresSafeArea(.container, edges: .top)
+            if !isSidebarCollapsed {
+                Rectangle()
+                    .fill(Color(NSColor.separatorColor))
+                    .frame(width: 1)
+                    .ignoresSafeArea(.container, edges: .top)
+                    .transition(.opacity)
 
-            configurationPane
-                .frame(width: 300)
+                configurationPane
+                    .frame(width: 300)
+                    .transition(.move(edge: .trailing))
+            }
         }
         .ignoresSafeArea(.container, edges: .top)
         .fileImporter(
@@ -183,8 +188,8 @@ struct ContentView: View {
             }
         }
         .overlay(
-            floatingViewStylePicker
-                .padding(.top, 12)
+            floatingControlGroup
+                .padding(.top, 8)
                 .padding(.trailing, 16),
             alignment: .topTrailing
         )
@@ -224,6 +229,27 @@ struct ContentView: View {
                 .stroke(Color.primary.opacity(0.1), lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(0.08), radius: 3, y: 1.5)
+    }
+
+    private var floatingControlGroup: some View {
+        HStack(spacing: 8) {
+            floatingViewStylePicker
+
+            if isSidebarCollapsed {
+                Button {
+                    toggleSidebar()
+                } label: {
+                    Image(systemName: "sidebar.right")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.primary.opacity(0.85))
+                        .frame(width: 32, height: 28)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut("b", modifiers: [.command, .shift])
+                .help("Show Configuration Sidebar (Cmd+Shift+B)")
+            }
+        }
     }
 
     private var emptyDropZone: some View {
@@ -413,11 +439,24 @@ struct ContentView: View {
                 SettingsWindowManager.shared.showSettings(quickAccess: quickAccess)
             } label: {
                 Image(systemName: "gearshape")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 26, height: 26)
+                    .font(.system(size: 14, weight: .medium))
+                    .frame(width: 32, height: 28)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.borderless)
             .help("Open Settings")
+
+            Button {
+                toggleSidebar()
+            } label: {
+                Image(systemName: "sidebar.right")
+                    .font(.system(size: 15, weight: .medium))
+                    .frame(width: 32, height: 28)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.borderless)
+            .keyboardShortcut("b", modifiers: [.command, .shift])
+            .help("Hide Sidebar (Cmd+Shift+B)")
         }
         .frame(height: 28)
         .padding(.horizontal, 16)
@@ -700,6 +739,12 @@ struct ContentView: View {
 
         guard panel.runModal() == .OK, let url = panel.url else { return }
         watchedFolderURL = url
+    }
+
+    private func toggleSidebar() {
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+            isSidebarCollapsed.toggle()
+        }
     }
 
     // MARK: - Layout Helpers
