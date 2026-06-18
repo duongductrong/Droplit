@@ -28,7 +28,7 @@ struct CompressoSettingsPage<Content: View>: View {
     init(
         title: String,
         subtitle: String,
-        showsHeader: Bool = true,
+        showsHeader: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.title = title
@@ -57,7 +57,7 @@ struct CompressoSettingsPage<Content: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, CompressoSettingsMetrics.pageHorizontalPadding)
-            .padding(.top, CompressoSettingsMetrics.pageTopPadding)
+            .padding(.top, showsHeader ? CompressoSettingsMetrics.pageTopPadding : 20)
             .padding(.bottom, CompressoSettingsMetrics.pageBottomPadding)
             .frame(maxWidth: .infinity, alignment: .topLeading)
         }

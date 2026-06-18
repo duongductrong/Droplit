@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var viewStyle: CompressoWorkspaceViewStyle = .current
     @State private var isImporting = false
     @State private var isDropTargeted = false
+    @State private var isShowingSettings = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -40,7 +41,8 @@ struct ContentView: View {
 
                 WorkspaceConfigurationPane(
                     quickAccess: quickAccess,
-                    isSidebarCollapsed: $isSidebarCollapsed
+                    isSidebarCollapsed: $isSidebarCollapsed,
+                    isShowingSettings: $isShowingSettings
                 )
                 .frame(width: 300)
                 .transition(.move(edge: .trailing))
@@ -55,6 +57,9 @@ struct ContentView: View {
             if case .success(let urls) = result {
                 quickAccess.stageDroppedURLs(urls)
             }
+        }
+        .sheet(isPresented: $isShowingSettings) {
+            SettingsViewWrapper(quickAccess: quickAccess)
         }
         .onAppear {
             quickAccess.start()

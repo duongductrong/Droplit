@@ -49,53 +49,136 @@ final class SettingsWindowManager: NSObject, NSWindowDelegate {
 
 struct SettingsViewWrapper: View {
     @ObservedObject var quickAccess: QuickAccessManager
-    @State private var selectedSection: CompressoSettingsSection? = .about
-    @State private var searchText = ""
+    @State private var selectedSection: CompressoSettingsSection = .quickAccess
     @State private var isImporting = false
+    @Environment(\.presentationMode) private var presentationMode
+    @State private var hoveredTab: CompressoSettingsSection? = nil
+
+    private let sidebarWidth: CGFloat = 200
 
     var body: some View {
-        Group {
-            if #available(macOS 13.0, *) {
-                CompressoModernSettingsRoot(
-                    quickAccess: quickAccess,
-                    selectedSection: $selectedSection,
-                    selectedDetailSection: selectedSectionBinding,
-                    searchText: $searchText,
-                    isImporting: $isImporting
-                )
-            } else {
-                CompressoLegacySettingsRoot(
-                    quickAccess: quickAccess,
-                    selectedSection: $selectedSection,
-                    selectedDetailSection: selectedSectionBinding,
-                    searchText: $searchText,
-                    isImporting: $isImporting
-                )
+        HStack(spacing: 0) {
+            // Sidebar (Aesthetic Style)
+            VStack(alignment: .leading, spacing: 6) {
+                Spacer()
+                    .frame(height: 16)
+
+                ForEach([CompressoSettingsSection.quickAccess, .output, .tools, .queue, .about], id: \.self) { section in
+                    sidebarTabRow(section: section)
+                }
+
+                Spacer()
             }
+            .frame(width: sidebarWidth)
+            .frame(maxHeight: .infinity)
+            .background(
+                VisualEffectView(material: .sidebar, blendingMode: .withinWindow)
+                    .overlay(Color.black.opacity(0.15))
+            )
+
+            // Separator
+            Rectangle()
+                .fill(Color.white.opacity(0.08))
+                .frame(width: 0.5)
+                .frame(maxHeight: .infinity)
+
+            // Content Column (Aesthetic Style)
+            VStack(spacing: 0) {
+                // Header Bar
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text(selectedSection.title)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.white)
+
+                        Spacer()
+
+                        Button(action: {
+                            presentationMode.wrappedValue.dismiss()
+                        }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.white.opacity(0.3))
+                                .frame(width: 24, height: 24)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                    Text(selectedSection.subtitle)
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
+
+                Divider()
+                    .opacity(0.12)
+
+                // Content View
+                CompressoSettingsDetailView(
+                    selection: $selectedSection,
+                    quickAccess: quickAccess,
+                    isImporting: $isImporting
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(width: 860, height: 580)
+        .background(
+            VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                .overlay(Color.black.opacity(0.35))
+        )
+        .preferredColorScheme(.dark)
         .fileImporter(
             isPresented: $isImporting,
             allowedContentTypes: QuickAccessFileKind.importableContentTypes,
             allowsMultipleSelection: true
         ) { result in
             if case .success(let urls) = result {
-                quickAccess.ingestDroppedURLs(urls)
+                quickAccess.stageDroppedURLs(urls)
             }
         }
-        .frame(
-            minWidth: 860,
-            idealWidth: 860,
-            maxWidth: .infinity,
-            minHeight: 560,
-            idealHeight: 760,
-            maxHeight: .infinity
-        )
     }
 
-    private var selectedSectionBinding: Binding<CompressoSettingsSection> {
-        Binding(
-            get: { (selectedSection ?? .about).canonicalSection },
-            set: { selectedSection = $0.canonicalSection }
-        )
+    private func sidebarTabRow(section: CompressoSettingsSection) -> some View {
+        let isSelected = selectedSection == section
+        let isHovered = hoveredTab == section
+
+        return Button(action: {
+            selectedSection = section
+        }) {
+            HStack(spacing: 8) {
+                Image(systemName: section.systemImage)
+                    .font(.system(size: 12))
+                    .foregroundColor(isSelected ? .white : .secondary)
+                    .frame(width: 16, height: 16)
+
+                Text(section.title)
+                    .font(.system(size: 12, weight: .regular))
+                    .foregroundColor(isSelected ? .white : .white.opacity(0.85))
+                    .lineLimit(1)
+
+                Spacer()
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(isSelected ? Color.accentColor : (isHovered ? Color.white.opacity(0.06) : Color.clear))
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering in
+            if hovering {
+                hoveredTab = section
+            } else if hoveredTab == section {
+                hoveredTab = nil
+            }
+        }
+        .padding(.horizontal, 8)
     }
 }

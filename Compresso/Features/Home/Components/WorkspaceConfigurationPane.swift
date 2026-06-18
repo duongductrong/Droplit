@@ -12,6 +12,7 @@ import SwiftUI
 struct WorkspaceConfigurationPane: View {
     @ObservedObject var quickAccess: QuickAccessManager
     @Binding var isSidebarCollapsed: Bool
+    @Binding var isShowingSettings: Bool
 
     @State private var concurrency: Int = 3
     @State private var optimizationOutputMode = OptimizationOutputSettings.optimizationOutputMode
@@ -103,7 +104,7 @@ struct WorkspaceConfigurationPane: View {
             Spacer()
 
             Button {
-                SettingsWindowManager.shared.showSettings(quickAccess: quickAccess)
+                isShowingSettings = true
             } label: {
                 Image(systemName: "gearshape")
                     .font(.system(size: 14, weight: .medium))

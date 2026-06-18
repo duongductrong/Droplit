@@ -63,7 +63,7 @@ struct CompressoLegacySettingsRoot: View {
                     CompressoSettingsSidebarView(
                         selection: $selectedSection,
                         searchText: $searchText,
-                        showChrome: true,
+                        showChrome: false,
                         toggleSidebar: toggleSidebar
                     )
                     .frame(width: CompressoSettingsSidebarMetrics.width)
@@ -105,8 +105,6 @@ struct CompressoLegacySettingsRoot: View {
 
     private var collapsedSidebarChrome: some View {
         HStack(spacing: 16) {
-            CompressoTrafficLightsView()
-
             sidebarToggleButton
         }
     }
