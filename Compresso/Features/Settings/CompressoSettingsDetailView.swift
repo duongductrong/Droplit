@@ -3,7 +3,6 @@ import SwiftUI
 struct CompressoSettingsDetailView: View {
     @Binding var selection: CompressoSettingsSection
     @ObservedObject var quickAccess: QuickAccessManager
-    @Binding var isImporting: Bool
 
     var body: some View {
         pageContent
@@ -16,8 +15,7 @@ struct CompressoSettingsDetailView: View {
         case .general:
             GeneralSettingsView(
                 selection: $selection,
-                quickAccess: quickAccess,
-                isImporting: $isImporting
+                quickAccess: quickAccess
             )
         case .quickAccess, .concurrency:
             QuickAccessSettingsView(quickAccess: quickAccess)
@@ -25,8 +23,6 @@ struct CompressoSettingsDetailView: View {
             OutputSettingsView(quickAccess: quickAccess)
         case .tools:
             ToolsSettingsView()
-        case .queue:
-            QueueSettingsView(quickAccess: quickAccess, isImporting: $isImporting)
         case .about:
             InfoSettingsView(section: selection)
         }

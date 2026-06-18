@@ -50,7 +50,6 @@ final class SettingsWindowManager: NSObject, NSWindowDelegate {
 struct SettingsViewWrapper: View {
     @ObservedObject var quickAccess: QuickAccessManager
     @State private var selectedSection: CompressoSettingsSection = .quickAccess
-    @State private var isImporting = false
     @Environment(\.presentationMode) private var presentationMode
     @State private var hoveredTab: CompressoSettingsSection? = nil
 
@@ -63,7 +62,7 @@ struct SettingsViewWrapper: View {
                 Spacer()
                     .frame(height: 16)
 
-                ForEach([CompressoSettingsSection.quickAccess, .output, .tools, .queue, .about], id: \.self) { section in
+                ForEach([CompressoSettingsSection.quickAccess, .output, .tools, .about], id: \.self) { section in
                     sidebarTabRow(section: section)
                 }
 
@@ -119,8 +118,7 @@ struct SettingsViewWrapper: View {
                 // Content View
                 CompressoSettingsDetailView(
                     selection: $selectedSection,
-                    quickAccess: quickAccess,
-                    isImporting: $isImporting
+                    quickAccess: quickAccess
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
@@ -132,15 +130,6 @@ struct SettingsViewWrapper: View {
                 .overlay(Color.black.opacity(0.35))
         )
         .preferredColorScheme(.dark)
-        .fileImporter(
-            isPresented: $isImporting,
-            allowedContentTypes: QuickAccessFileKind.importableContentTypes,
-            allowsMultipleSelection: true
-        ) { result in
-            if case .success(let urls) = result {
-                quickAccess.stageDroppedURLs(urls)
-            }
-        }
     }
 
     private func sidebarTabRow(section: CompressoSettingsSection) -> some View {

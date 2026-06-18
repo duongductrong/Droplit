@@ -3,7 +3,6 @@ import SwiftUI
 struct GeneralSettingsView: View {
     @Binding var selection: CompressoSettingsSection
     @ObservedObject var quickAccess: QuickAccessManager
-    @Binding var isImporting: Bool
 
     var body: some View {
         CompressoSettingsPage(
@@ -68,27 +67,6 @@ struct GeneralSettingsView: View {
                     selection = .quickAccess
                 }
             }
-
-            CompressoSettingsGroup(
-                "Actions",
-                description: "Open media optimization or import files without leaving settings."
-            ) {
-                CompressoSettingsControlRow(
-                    title: "Optimize Files",
-                    subtitle: "Import files directly into media optimization"
-                ) {
-                    Button("Choose...") {
-                        isImporting = true
-                    }
-                }
-                CompressoSettingsDivider()
-                CompressoSettingsNavigationRow(
-                    section: .queue,
-                    subtitle: queueSummaryText
-                ) {
-                    selection = .queue
-                }
-            }
         }
     }
 
@@ -109,14 +87,5 @@ struct GeneralSettingsView: View {
             return "All dependencies ready"
         }
         return "\(missingCount) missing dependencies"
-    }
-
-    private var queueSummaryText: String {
-        guard !quickAccess.items.isEmpty else { return "No jobs yet" }
-        let parts = [
-            quickAccess.processingCount > 0 ? "\(quickAccess.processingCount) running" : nil,
-            quickAccess.queuedCount > 0 ? "\(quickAccess.queuedCount) queued" : nil
-        ].compactMap { $0 }
-        return parts.isEmpty ? "\(quickAccess.items.count) total" : parts.joined(separator: ", ")
     }
 }

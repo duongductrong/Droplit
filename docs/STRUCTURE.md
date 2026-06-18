@@ -64,7 +64,6 @@ Compresso/
       CompressoSettingsSidebarView.swift
       GeneralSettingsView.swift
       InfoSettingsView.swift
-      QueueSettingsView.swift
       QuickAccessSettingsView.swift
       ToolsSettingsView.swift
 
@@ -218,7 +217,6 @@ Parallel job count is changed from the Settings window Concurrency configuration
 9. `QuickAccessSettingsView` owns Quick Access style, trigger, placement, after-processing, preview, and concurrency controls.
 10. `OutputSettingsView` owns save location, destination folder, internal temporary folder reveal, temp retention, and conversion output behavior.
 11. `ToolsSettingsView` owns optimizer status and Homebrew install action.
-12. `QueueSettingsView` owns the Media Optimization status, remove actions, and file import entry point.
 
 ## Homebrew Bootstrap Flow
 

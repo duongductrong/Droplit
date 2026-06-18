@@ -13,7 +13,6 @@ struct CompressoModernSettingsRoot: View {
     @Binding var selectedSection: CompressoSettingsSection?
     let selectedDetailSection: Binding<CompressoSettingsSection>
     @Binding var searchText: String
-    @Binding var isImporting: Bool
     @State private var columnVisibility: NavigationSplitViewVisibility = .all
 
     var body: some View {
@@ -27,8 +26,7 @@ struct CompressoModernSettingsRoot: View {
         } detail: {
             CompressoSettingsDetailView(
                 selection: selectedDetailSection,
-                quickAccess: quickAccess,
-                isImporting: $isImporting
+                quickAccess: quickAccess
             )
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
@@ -53,7 +51,6 @@ struct CompressoLegacySettingsRoot: View {
     @Binding var selectedSection: CompressoSettingsSection?
     let selectedDetailSection: Binding<CompressoSettingsSection>
     @Binding var searchText: String
-    @Binding var isImporting: Bool
     @State private var isSidebarVisible = true
 
     var body: some View {
@@ -73,8 +70,7 @@ struct CompressoLegacySettingsRoot: View {
 
                 CompressoSettingsDetailView(
                     selection: selectedDetailSection,
-                    quickAccess: quickAccess,
-                    isImporting: $isImporting
+                    quickAccess: quickAccess
                 )
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }

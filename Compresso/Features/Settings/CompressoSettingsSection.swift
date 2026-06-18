@@ -14,7 +14,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
     case output
     case conversion
     case tools
-    case queue
     case concurrency
     case storage
     case about
@@ -28,7 +27,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
         case .output: "Output & Storage"
         case .conversion: "Conversion"
         case .tools: "Dependencies"
-        case .queue: "Media Optimization"
         case .concurrency: "Concurrency"
         case .storage: "Storage"
         case .about: "About"
@@ -42,7 +40,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
         case .output: "Save location, storage, and conversion output"
         case .conversion: "How converted files are written"
         case .tools: "Dependency availability and setup"
-        case .queue: "Current optimization jobs and imports"
         case .concurrency: "Parallel optimization limits"
         case .storage: "Temporary output retention"
         case .about: "Version, build, and app details"
@@ -56,7 +53,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
         case .output: "folder.fill"
         case .conversion: "arrow.triangle.2.circlepath"
         case .tools: "wrench.and.screwdriver.fill"
-        case .queue: "tray.full.fill"
         case .concurrency: "bolt.horizontal.circle.fill"
         case .storage: "internaldrive.fill"
         case .about: "info.circle.fill"
@@ -73,8 +69,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
             return Color.green
         case .tools:
             return Color.orange
-        case .queue:
-            return Color.pink
         }
     }
 
@@ -108,10 +102,6 @@ enum CompressoSettingsSection: String, CaseIterable, Identifiable {
         CompressoSettingsSidebarGroup(
             title: "Settings",
             sections: [.quickAccess, .output, .tools]
-        ),
-        CompressoSettingsSidebarGroup(
-            title: "Tool",
-            sections: [.queue]
         )
     ]
 
